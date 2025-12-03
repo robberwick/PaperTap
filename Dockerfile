@@ -9,7 +9,7 @@ RUN echo >/apt '#!/bin/sh' && chmod +x /apt && echo >>/apt \
 	'-o=Dpkg::Options::=--force-confold -o=Dpkg::Options::=--force-confdef' \
 	'--assume-yes --quiet --no-install-recommends "$@"'
 RUN /apt update
-RUN /apt install openjdk-17-jre-headless
+RUN /apt install openjdk-21-jre-headless
 RUN /apt install curl unzip git
 
 # Nested homedir to be able to nuke it later
