@@ -1,0 +1,63 @@
+# NOTICE
+
+PaperTap is based on a chain of forks of the original NFC E-Ink Writer project.
+
+## Fork History
+
+**PaperTap** (Current Project)
+- Author: Rob Berwick
+- Copyright: (c) 2025 Rob Berwick
+- Changes: Rebranded to PaperTap, added PDF URL sharing, QR code auto-detection, 
+  settings screen, audio feedback, Material Design 3 UI updates, removed dithering 
+  in favor of threshold-based processing for optimal QR code clarity
+
+**NFC E-Paper Writer** (harinworks fork)
+- Repository: https://github.com/harinworks/nfc-epaper-writer
+- Author: harinworks
+- Copyright: (c) 2024 harinworks
+- Changes: PDF support, QR code extraction with ML Kit, image processing improvements
+
+**NFC E-Paper Writer** (mk-fg fork)
+- Repository: https://github.com/mk-fg/nfc-epaper-writer
+- Author: mk-fg
+- Copyright: (c) 2024 mk-fg
+- Changes: Build fixes, UI improvements
+
+**NFC E-Ink Writer** (Original Project)
+- Repository: https://github.com/joshuatz/nfc-epaper-writer
+- Author: Joshua Tzucker
+- Copyright: (c) 2021 Joshua Tzucker
+- Original implementation with WaveShare SDK integration
+
+All versions are licensed under the MIT License.
+See the LICENSE file for the complete license text.
+
+## Third-Party Components
+
+This software also includes or depends on the following third-party components:
+
+### WaveShare Android SDK
+- Used for NFC communication with e-paper displays
+- Copyright: WaveShare Electronics
+- Documentation: https://www.waveshare.com/wiki/Android_SDK_for_NFC-Powered_e-Paper
+
+### ML Kit Barcode Scanning
+- Library: com.google.mlkit:barcode-scanning:17.3.0
+- Copyright: Google LLC
+- License: Apache License 2.0
+
+### Android Image Cropper
+- Library: com.github.CanHub:Android-Image-Cropper
+- Copyright: CanHub
+- License: Apache License 2.0
+
+### PickImage Library
+- Library: com.github.jrvansuita:PickImage
+- Copyright: Jeovanny Escobar Ventura (jrvansuita)
+- License: Apache License 2.0
+
+### Material Design Components
+- Library: com.google.android.material:material
+- Copyright: Google LLC
+- License: Apache License 2.0
+

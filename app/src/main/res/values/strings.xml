@@ -1,14 +1,24 @@
 <resources>
-    <string name="app_name">NFC E-Ink Writer</string>
-    <string name="cta_image_exact_text">Load Exact Image</string>
+    <string name="app_name">PaperTap</string>
     <string name="cta_image_proc_text">Load/Take &amp; Process Image</string>
-    <string name="cta_new_text_invite">New - Text</string>
-    <string name="cta_new_graphic_invite">New - Graphic</string>
+    <string name="cta_extract_qr_text">Extract QR Code</string>
     <string name="currDisplaySizeDefaultText">Select a Display Size</string>
     <string name="flashButtonText">Flash / Program</string>
     <string name="image_preview_content_description">Image to Flash Preview</string>
-    <string name="hold_phone_to_flash_text">Hold Phone Against Eink Display</string>
+    <string name="hold_phone_to_flash_text">Hold e-ink display to phone to update</string>
+    <string name="ready_to_flash_title">Ready to Flash</string>
+    <string name="hold_phone_to_flash_description">Hold your e-ink display against the back of your phone to update</string>
     <string name="imagePreviewText">Bitmap Preview:</string>
     <string name="pleaseWaitWhileFlashingText">Please wait...</string>
     <string name="reflash_cta_text">Reflash Last Image</string>
+    <string name="welcome_title">Welcome to PaperTap</string>
+    <string name="welcome_message">PaperTap writes QR codes to NFC e-paper displays.\n\nTo get started:\n• Share a PDF or image with PaperTap\n• Or tap "Extract QR Code" to select from your gallery or camera\n\nOnce extracted, hold your e-paper display to the back of your phone to flash the QR code.</string>
+    <string name="about_title">About</string>
+    <string name="about_app_version">Version %s</string>
+    <string name="about_licenses_title">Open Source Licenses</string>
+    <string name="about_copyright">Copyright © 2025 Rob Berwick</string>
+    <string name="about_original_project">Based on NFC E-Ink Writer</string>
+    <string name="about_original_author">Original work by Joshua Tzucker\nWith contributions from mk-fg and harinworks</string>
+    <string name="about_license_summary">This app is licensed under the MIT License</string>
+    <string name="menu_about">About</string>
 </resources>

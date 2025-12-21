@@ -1,145 +1,145 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="?attr/android:colorBackground"
     tools:context=".MainActivity">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fitsSystemWindows="true">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="?attr/colorPrimary"
+            android:elevation="4dp"
+            app:logo="@drawable/papertap_logotype"
+            app:logoAdjustViewBounds="true"
+            app:titleTextColor="?attr/colorOnPrimary"
+            android:theme="@style/ToolbarTheme"
+            app:popupTheme="@style/PopupMenuTheme" />
+    </com.google.android.material.appbar.AppBarLayout>
 
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:background="?attr/android:colorBackground"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:paddingTop="24dp">
 
-            <androidx.cardview.widget.CardView
-                android:id="@+id/reflashButton"
-                android:layout_width="wrap_content"
+            <!-- Welcome card - shown when no previous image exists -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/welcomeCard"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="80dp"
-                app:cardBackgroundColor="@color/blue_dark">
+                android:layout_marginStart="24dp"
+                android:layout_marginEnd="24dp"
+                android:layout_marginTop="24dp"
+                android:visibility="gone"
+                app:cardBackgroundColor="?attr/colorPrimaryContainer"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="4dp"
+                app:strokeWidth="0dp">
 
-                <androidx.constraintlayout.widget.ConstraintLayout
-                    android:id="@+id/imagePreviewCardBody"
+                <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent">
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="24dp">
 
                     <TextView
-                        android:id="@+id/reflashButtonText"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:paddingHorizontal="30dp"
-                        android:paddingVertical="10dp"
-                        android:text="@string/reflash_cta_text"
-                        android:textSize="12pt"
-                        app:layout_constraintLeft_toLeftOf="parent"
-                        app:layout_constraintRight_toRightOf="parent"
-                        app:layout_constraintTop_toTopOf="parent" />
+                        android:text="@string/welcome_title"
+                        android:textSize="22sp"
+                        android:textStyle="bold"
+                        android:textColor="?attr/colorOnPrimaryContainer"
+                        android:gravity="center" />
 
-                    <ImageView
-                        android:id="@+id/reflashButtonImage"
-                        android:layout_width="wrap_content"
+                    <TextView
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="20dp"
-                        android:contentDescription="@string/image_preview_content_description"
-                        android:minWidth="340dp"
-                        android:minHeight="240dp"
-                        android:padding="10dp"
-                        app:layout_constraintLeft_toLeftOf="parent"
-                        app:layout_constraintRight_toRightOf="parent"
-                        app:layout_constraintTop_toBottomOf="@+id/reflashButtonText"
-                        app:srcCompat="@android:drawable/stat_sys_warning" />
-                </androidx.constraintlayout.widget.ConstraintLayout>
-            </androidx.cardview.widget.CardView>
+                        android:layout_marginTop="16dp"
+                        android:text="@string/welcome_message"
+                        android:textSize="16sp"
+                        android:textColor="?attr/colorOnPrimaryContainer"
+                        android:lineSpacingMultiplier="1.2" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
-            <Button
-                android:id="@+id/cta_image_exact"
-                android:layout_width="300dp"
-                android:layout_height="65dp"
-                android:layout_marginTop="20dp"
-                android:text="@string/cta_image_exact_text" />
+            <!-- Reflash button - shown when previous image exists -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/reflashButton"
+                style="@style/Widget.Material3.Button.ElevatedButton"
+                android:layout_width="match_parent"
+                android:layout_height="64dp"
+                android:layout_marginStart="24dp"
+                android:layout_marginEnd="24dp"
+                android:layout_marginTop="24dp"
+                android:backgroundTint="@color/white"
+                android:textColor="@color/blue_darkest"
+                android:text="@string/reflash_cta_text"
+                android:visibility="gone"
+                app:icon="@android:drawable/ic_popup_sync"
+                app:iconTint="@color/blue_dark"
+                app:iconGravity="start"
+                android:textSize="16sp" />
 
-            <Button
-                android:id="@+id/cta_image_proc"
-                android:layout_width="300dp"
-                android:layout_height="65dp"
-                android:layout_marginTop="15dp"
-                android:text="@string/cta_image_proc_text" />
+            <!-- Preview of last flashed image -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/reflashPreviewCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="24dp"
+                android:layout_marginEnd="24dp"
+                android:layout_marginTop="16dp"
+                android:visibility="gone"
+                app:cardBackgroundColor="?attr/colorPrimaryContainer"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="4dp"
+                app:strokeWidth="0dp">
 
-            <Button
-                android:id="@+id/cta_new_text"
-                android:layout_width="300dp"
-                android:layout_height="65dp"
-                android:layout_marginTop="15dp"
-                android:text="@string/cta_new_text_invite" />
+                <ImageView
+                    android:id="@+id/reflashButtonImage"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:contentDescription="@string/image_preview_content_description"
+                    android:adjustViewBounds="true"
+                    android:scaleType="fitCenter"
+                    android:padding="16dp" />
+            </com.google.android.material.card.MaterialCardView>
 
-            <Button
-                android:id="@+id/cta_new_graphic"
-                android:layout_width="300dp"
-                android:layout_height="65dp"
-                android:layout_marginTop="15dp"
-                android:layout_marginBottom="20dp"
-                android:text="@string/cta_new_graphic_invite" />
+            <!-- Primary action button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/cta_extract_qr"
+                style="@style/Widget.Material3.Button.ElevatedButton"
+                android:layout_width="match_parent"
+                android:layout_height="64dp"
+                android:layout_marginStart="24dp"
+                android:layout_marginEnd="24dp"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="24dp"
+                android:backgroundTint="@color/white"
+                android:textColor="@color/blue_darkest"
+                android:text="@string/cta_extract_qr_text"
+                app:icon="@android:drawable/ic_menu_search"
+                app:iconTint="@color/blue_dark"
+                app:iconGravity="start"
+                android:textSize="16sp" />
 
         </LinearLayout>
     </ScrollView>
 
-    <androidx.appcompat.widget.Toolbar
-        android:id="@+id/main_toolbar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="?attr/colorPrimary"
-        android:minHeight="?attr/actionBarSize"
-        android:theme="?attr/actionBarTheme"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" >
-
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-        >
-
-            <TextView
-                android:id="@+id/currentDisplaySize"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:layout_marginEnd="20dp"
-                android:text="@string/currDisplaySizeDefaultText"
-                app:layout_constraintEnd_toStartOf="@+id/changeDisplaySizeInvite"
-                app:layout_constraintTop_toTopOf="parent" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/changeDisplaySizeInvite"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal|center_vertical"
-                android:layout_marginTop="3dp"
-                android:layout_marginEnd="40dp"
-                android:drawablePadding="0dp"
-                android:elevation="10dp"
-                android:minWidth="50dp"
-                android:minHeight="50dp"
-                android:paddingLeft="0dp"
-                android:paddingRight="0dp"
-                android:stateListAnimator="@null"
-                android:translationZ="10dp"
-                app:icon="@android:drawable/ic_menu_preferences"
-                app:iconGravity="textStart"
-                app:iconPadding="0dp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:strokeColor="@color/black"
-                app:strokeWidth="1dp" />
-        </androidx.constraintlayout.widget.ConstraintLayout>
-
-    </androidx.appcompat.widget.Toolbar>
-
-
-
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

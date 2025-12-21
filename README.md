@@ -1,258 +1,122 @@
-# NFC E-Ink Writer
+# PaperTap
 
-Android application to generate/process images for and upload to
-WaveShare Passive NFC-Powered (aka *parasitic*) E-Paper / E-Ink displays.
+**Display your e-ticket QR codes on passive NFC-powered e-ink displays.**
 
-Contents:
+PaperTap is an Android application designed to extract QR codes from train tickets, event tickets, and other e-tickets, then write them to 1.54" WaveShare NFC e-paper displays. Perfect for keeping your tickets accessible without draining your phone battery.
 
-- [Features](#hdr-features)
-- [How to build and install this to an Android device]
-- [Demos](#hdr-demos)
-- [Known Issues](#hdr-known_issues)
-- [Task Backlog](#hdr-task_backlog)
-- [Technical Details from the original project]
+## Why PaperTap?
 
-It's only intended to interact with WaveShare displays through [their Android SDK],
-and unlikely to work with similar displays from any other vendor, unless they are
-intentionally designed to be compatible.\
-WaveShare documentation explicitly says "This product is not compatible with
-Samsung smartphones", but not sure why specifically - could be that it's just
-their original app that doesn't work on these.\
-This application requires Android 11+ OS (API level 30 or higher).
+- **One-tap workflow**: Share a PDF ticket → QR code automatically extracted → Tap display to write
+- **Battery-free display**: The e-paper tag requires no power and lasts indefinitely
+- **Always scannable**: Works at ticket gates even when your phone is dead
+- **Ultra-focused**: Built specifically for the QR code ticket use case
 
-Passive NFC E-Paper devices supported by the app are typically intended for
-commercial usage like shelf labels and product tags, other informational notes,
-or smaller color ones also seem to be for decorative uses (like a chain/keyfob toy).\
-Some of the compatible epaper device links: [1.54"], [2.13"], [2.7"], [2.9"], [4.2"], [7.5"], etc.
+## Target Hardware
 
-[How to build and install this to an Android device]:
-  #hdr-how_to_build_and_install_this_to_an_andr.1gO6
-[Technical Details from the original project]:
-  #hdr-technical_details_from_the_original_project
+- **Display**: WaveShare 1.54" Passive NFC-Powered E-Paper (200×200px)
+- **Phone**: Any Android device with NFC capability (API 21+)
+- **Tag Type**: NFC-A compatible displays
 
-![WaveShare 1.54" Passive NFC-Powered EInk Display, showing an image of car from Initial D anime](https://github.com/DevPika/nfc-epaper-writer-update/assets/19701790/4fab5732-7b0c-4a90-b7ff-1b47d66bbc96)
+Get the display: [WaveShare 1.54" NFC E-Paper]
 
-![WaveShare 2.9" Passive NFC-Powered EInk Display, showing the text "Hello World" with a waving hand emoji at the end](https://user-images.githubusercontent.com/17817563/118736344-32156480-b7f7-11eb-9a03-7d5b7c878c30.jpg)
+[WaveShare 1.54" NFC E-Paper]: https://www.waveshare.com/1.54inch-nfc-powered-e-paper-bw.htm
 
-This particular version of the app is a code fork of the original version,
-written by Joshua Tzucker (in [joshuatz/nfc-epaper-writer] repository),
-with fixes/features merged from other forks, aimed to fix some build and
-UI issues that popped-up when I tried to use it, since first-party WaveShare
-application straight-up doesn't work on my device.
-
-Alternative URLs for this repository:
-
-- <https://github.com/mk-fg/nfc-epaper-writer>
-- <https://codeberg.org/mk-fg/nfc-epaper-writer>
-- <https://fraggod.net/code/git/nfc-epaper-writer>
-
-[their Android SDK]: https://www.waveshare.com/wiki/Android_SDK_for_NFC-Powered_e-Paper
-[1.54"]: https://www.waveshare.com/1.54inch-nfc-powered-e-paper-bw.htm
-[2.13"]: https://www.waveshare.com/2.13inch-nfc-powered-e-paper.htm
-[2.7"]: https://www.waveshare.com/2.7inch-nfc-powered-e-paper-module.htm
-[2.9"]: https://www.waveshare.com/2.9inch-nfc-powered-e-paper.htm
-[4.2"]: https://www.waveshare.com/4.2inch-nfc-powered-e-paper.htm
-[7.5"]: https://www.waveshare.com/7.5inch-nfc-powered-e-paper.htm
-[joshuatz/nfc-epaper-writer]: https://github.com/joshuatz/nfc-epaper-writer
-
-
-<a name=hdr-features></a>
 ## Features
 
-Main application screen should contain following elements, top-to-bottom:
+✅ **Automatic QR detection** - ML Kit barcode scanning finds QR codes instantly  
+✅ **PDF support** - Direct sharing from email links or downloaded PDFs  
+✅ **Image support** - Works with screenshots, photos, or gallery images  
+✅ **Crisp output** - Threshold-based processing ensures QR codes scan reliably  
+✅ **Audio feedback** - Distinct sounds for start, success, and errors  
+✅ **Configurable padding** - Adjust QR code margins via settings  
+✅ **Quick reflash** - One-tap button to rewrite your last ticket  
 
-- Screen size selection (in top toolbar, remembered) -
-  determines image size and crop/scaling.
+## How It Works
 
-- Re-upload last-used image box (with preview) - tap to immediately go do that.
+1. **Get your ticket** - Receive email with PDF link or download the PDF
+2. **Share to PaperTap** - Tap "Share" in your browser/file app, select PaperTap
+3. **Auto-extraction** - App detects and extracts the QR code automatically
+4. **Tap to write** - Hold your phone to the e-paper display
+5. **Done** - Hear success sound, ticket is now on the display
 
-- Select exact image to upload - for pre-made images
-  of exactly right size that don't need any processing.
+## Building & Installation
 
-- Select/take and crop/scale/dither image - for using camera
-  or image files of any size from any source.
+### Quick Build (Docker)
 
-  Cropping dialog will allow to pick part of the image with right aspect ratio for
-  selected screen, which will then be scaled to its size, and converted to 3-color
-  (BWR) image using color dithering (added in [DevPika/nfc-epaper-writer-update] fork).
+Requires [Docker Engine] installed with ~5GB memory and 3GB disk space.
 
-- Create image from any composed text. Supports emojis.
+```bash
+# Download Dockerfile
+curl -OL https://raw.githubusercontent.com/robberwick/PaperTap/main/Dockerfile
 
-- Draw image on the phone screen, using [JSPaint] as WYSIWYG editor.
+# Build APK
+docker build --output type=local,dest=. .
 
-App should work with all screen sizes supported by [WaveShare SDK].
+# Install app-debug.apk on your Android device
+```
 
-> Not sure how well last two sources work, main use-case for mk-fg/nfc-epaper-writer
-> fork is exact image upload - there are plenty of good tools to make/edit images.
->
-> Floyd-Steinberg black-white-red (BWR) color dithering (merged from DevPika's fork)
-> used for processing non-exact images might work suboptimally with 1-bit black-and-white
-> displays - also didn't test it much here.
+### Android Studio
 
-[DevPika/nfc-epaper-writer-update]:
-  https://github.com/DevPika/nfc-epaper-writer-update/
-[JSPaint]: https://jspaint.app/
-[WaveShare SDK]: https://www.waveshare.com/wiki/Android_SDK_for_NFC-Powered_e-Paper
+Open the project in [Android Studio] and build via Build → Build Bundle(s) / APK(s) → Build APK(s).
 
-
-<a name=hdr-how_to_build_and_install_this_to_an_andr.1gO6></a>
-## How to build and install this to an Android device
-
-Steps below require any system with modern docker (aka [Docker Engine]) installed
-(via e.g. `apt install docker` on ubuntu/debian linux), any terminal console app
-available to also run its command-line tools from, ~5 GiB of peak memory and
-about 3 GiB of disk space temporarily.
-
--   Copy or download [Dockerfile] from this repository into any directory.
-
-    Doesn't really matter which dir, it'll only be used to copy build result
-    (apk file) into by "docker build" command below.
-
-    For example, to fetch it using curl from the command line:
-
-    ```
-    curl -OL https://raw.githubusercontent.com/mk-fg/nfc-epaper-writer/main/Dockerfile
-    ```
-
--   Build and copy Android application package (APK) to the current directory:
-
-    ```
-    docker build --output type=local,dest=. .
-    ```
-
-    This will use Dockerfile as a recipe for `app-debug.apk`
-    and will put it next to that Dockerfile afterwards.
-
-    An older docker setup might give "unknown --output option" error,
-    in which case [docker-buildx plugin] might be required, and command will be
-    `docker buildx build --output type=local,dest=. .` instead of the one above.
-
--   Copy generated `app-debug.apk` file to an Android device, and open it there
-    (e.g. find and tap on it in Files app).
-    Note that Android 11+ is required for this app, shouldn't work on older devices.
-
--   Follow Android OS instruction popups from there on how to enable necessary
-    settings to be able to install this tool from a sideloaded APK file.
-
-    This type of app installation from an APK file is called "sideloading", and
-    steps required to allow it change between Android versions, but should be
-    easy to lookup for specific one on the internet, if Android's built-in prompts
-    don't make it clear enough.
-
--   Installed tool should show up among the usual "application drawer" icons
-    with "NFC E-Ink Writer" name and a generic "android robot head" icon.
-
-Another, more developer-focused option, is to build APK using [Android Studio IDE],
-which might be more or less complicated, depending on one's experience working
-with such tools/ecosystem (vs command-line steps above) - open the project there,
-and pick APK option from the Build menu.
-
-[Dockerfile]: Dockerfile
-[Android Studio IDE]: https://developer.android.com/studio
 [Docker Engine]: https://docs.docker.com/engine/install/
-[docker-buildx plugin]: https://www.baeldung.com/ops/docker-buildx
+[Android Studio]: https://developer.android.com/studio
 
+## Installation
 
-<a name=hdr-demos></a>
-## Demos
+Transfer the `app-debug.apk` to your Android device and install it. You'll need to enable installation from unknown sources in your device settings.
 
-These showcase application version from the original repository and displays
-packaged separately from the control board.
+**Requirements**: Android 5.0+ (API level 21 or higher)
 
-- Updating from a local image file:
+## Settings
 
-    ![Animated GIF showing this application letting a user select a local image file from their gallery, cropping it, and then updating EInk NFC display](https://user-images.githubusercontent.com/17817563/118732297-e2329f80-b7ee-11eb-9f5c-16b2872d6bf6.gif)
+Access via the menu (⋮) in the top-right corner:
 
-- Updating from typed-in text:
+- **Display Size**: Choose from supported WaveShare displays (defaults to 1.54")
+- **QR Code Padding**: Adjust white border around QR code (0-50 pixels)
 
-    ![Animated GIF showing the user being able to input custom text, having the text captured as an image, and then updating EInk NFC Display with resulting image](https://user-images.githubusercontent.com/17817563/118735056-7eab7080-b7f4-11eb-9d11-60d2aa58efe4.gif)
-
-- WYSIWYG image creator:
-
-    ![Animated GIF showing user creating a custom image via WYSIWYG paint editor, having the image captured to bitmap, and then uploading generated bitmap to EInk NFC Display](https://user-images.githubusercontent.com/17817563/118734322-ff696d00-b7f2-11eb-947d-dc844c259518.gif)
-
-
-<a name=hdr-known_issues></a>
 ## Known Issues
 
-NFC can be a little finnicky, and especially with these EInk displays.
-Depending on the power and capabilities of your phone, it may take time
-perfecting the exact distance and position to hold your phone in proximity
-to the EInk display in order to get successful updates.
+**NFC can be finnicky** - Finding the right position and distance between your phone and the e-paper display may require some experimentation. Each phone's NFC antenna is positioned differently.
 
-On certain Android phones, you might also see a high rate of your NFC radio /
-chipset randomly *"dying"*.
-This happens at a lower level of system APIs, so it is really hard for my
-application to detect or attempt to recover from.
+**Corrupted writes** - Occasionally the NFC transfer can fail, resulting in visual noise on the display. If this happens:
+1. Toggle NFC off and back on in your phone's Quick Settings
+2. Re-tap the display to retry the write
 
-> When detected by the lower-level APIs, Android will throw this as a
-> `android.os.DeadObjectException`, with the entry:
-> `NFC service dead - attempting to recover`.
-> You can see the [internal recovery efforts here].
+**NFC radio dying** - Some Android devices experience NFC chipset failures at the system level. This appears in logs as `android.os.DeadObjectException`. Toggle NFC off/on to recover.
+## Technical Details
 
-Additionally, sometimes you might see corrupted writes, where something goes
-wrong during the transceiving process and the display ends up with random noise:
+**Built with:**
+- Kotlin + Android SDK
+- ML Kit Barcode Scanning for QR detection
+- Android PdfRenderer for PDF processing
+- WaveShare NFC SDK for e-paper communication
+- Material Design 3 UI components
 
-![Animated GIF showing a failed update, with random noise appearing over previous image](https://user-images.githubusercontent.com/17817563/118723223-fde37900-b7e1-11eb-8b0c-c12ba4387d27.gif)
+**Key technologies:**
+- Threshold-based image processing for crisp QR codes
+- Foreground NFC dispatch for tag interception
+- AudioTrack API for custom success/error sounds
+- Kotlin coroutines for async operations
 
-Disabling-enabling NFC on the phone (by tapping its Quick Settings tile at the top)
-and re-sending the image afterwards works for me to work around the issue.
-NFC reset is needed because usually it stops working when this happens (like due
-to problem being "NFC dying" mentioned above), sometimes crashing/restarting the
-app as well.
+## Project Origins
 
-[internal recovery efforts here]:
-  https://github.com/aosp-mirror/platform_frameworks_base/blob/9635abafa0053c65e04b93da16c72da8af371454/core/java/android/nfc/NfcAdapter.java#L831-L865
+PaperTap is a focused fork of [joshuatz/nfc-epaper-writer], which was itself adapted by [mk-fg] and [DevPika]. This version strips away general-purpose image editing features to create a streamlined tool specifically for e-ticket QR codes.
 
+**Attribution chain:**
+- Copyright (c) 2025 Rob Berwick - PaperTap (focused e-ticket version)
+- Copyright (c) 2024 harinworks - Fork updates
+- Copyright (c) 2024 mk-fg - Fork updates  
+- Copyright (c) 2021 Joshua Tzucker - Original NFC E-Paper Writer
 
-<a name=hdr-task_backlog></a>
-## Task Backlog
+See [LICENSE] and [NOTICE] for complete MIT License details.
 
-- Replace "flashing" wording from original app with "update" or "upload",
-  as don't think it's called that in WaveShare docs, and memory is only
-  used as a temp buffer here, so seem to be a wrong/misleading word to use.
+[joshuatz/nfc-epaper-writer]: https://github.com/joshuatz/nfc-epaper-writer
+[mk-fg]: https://github.com/mk-fg/nfc-epaper-writer
+[DevPika]: https://github.com/DevPika/nfc-epaper-writer-update
+[LICENSE]: LICENSE
+[NOTICE]: NOTICE
 
-- Better recovery methods for NFC adapter dying.
+## License
 
-- When caching generated image, prefix or suffix with resolution,
-  and then only allow cached image for re-upload if saved resolution matches.
-
-- App Icon.
-
-- Publish APK and/or provide better build options.
-
-
-<a name=hdr-technical_details_from_the_original_project></a>
-## Technical Details from the original project
-
-(from the original [joshuatz/nfc-epaper-writer] repository)
-
-Building this project was my first time touching Kotlin, Java, or Android APIs,
-of which this project uses all three. I opted to go this route (native Android dev)
-instead of React Native or Flutter, because I knew I was going to need access
-to a lot of lower level APIs, and saw it as an opportunity to learn some new skills.
-
-This project uses a bunch of different technologies, and takes some interesting "shortcuts":
-
-- For the custom image generation options - both the text editor or WYSIWYG editor -
-    I used WebView so that I could use HTML + JS + Web Canvas, and pass back the bitmap data to Android.
-
-    - The WYSIWYG editor is actually just [JSPaint], but with injected
-      JavaScript for capturing the bitmap data from the app's canvas.
-
-    - The text editor is a custom tiny webpage I put together that renders
-      the text to a Canvas element, and then captures the raw bitmap data.
-
-- Local image option with processing uses [CanHub/Android-Image-Cropper] for cropping and resizing.
-
-- By using scoped storage and the right APIs, no special permissions
-  (other than NFC and Internet) are required from the User.
-
-- For actually sending the bitmap data over the NFC protocol,
-  this uses the [WaveShare Android SDK], and the JAR file that they provided.
-
-- Kotlin coroutines are used throughout, as there are a lot of operations that are
-  blocking in nature - main transceive operation is basically one long blocking sequence.
-
-[CanHub/Android-Image-Cropper]: https://github.com/CanHub/Android-Image-Cropper
-[WaveShare Android SDK]: https://www.waveshare.com/wiki/Android_SDK_for_NFC-Powered_e-Paper
+MIT License - See [LICENSE] file for details.

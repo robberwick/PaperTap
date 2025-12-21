@@ -1,83 +1,134 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="?attr/android:colorBackground"
     tools:context=".NfcFlasher">
 
-    <androidx.cardview.widget.CardView
-        android:id="@+id/previewImageWrapper"
-        android:layout_width="wrap_content"
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        app:cardElevation="10dp"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        android:fitsSystemWindows="true">
 
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:id="@+id/imagePreviewCardBody"
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
             android:layout_width="match_parent"
-            android:layout_height="match_parent">
+            android:layout_height="?attr/actionBarSize"
+            android:background="?attr/colorPrimary"
+            android:elevation="4dp"
+            app:title="Flash Image"
+            app:titleTextColor="?attr/colorOnPrimary"
+            app:navigationIcon="?attr/homeAsUpIndicator"
+            android:theme="@style/ToolbarTheme"
+            app:popupTheme="@style/PopupMenuTheme" />
+    </com.google.android.material.appbar.AppBarLayout>
 
-            <TextView
-                android:id="@+id/imagePreviewText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:paddingHorizontal="30dp"
-                android:paddingVertical="10dp"
-                android:text="@string/imagePreviewText"
-                android:textSize="12pt"
-                app:layout_constraintLeft_toLeftOf="parent"
-                app:layout_constraintRight_toRightOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
-
-            <ImageView
-                android:id="@+id/previewImageView"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:contentDescription="@string/image_preview_content_description"
-                android:layout_marginTop="10dp"
-                android:minWidth="340dp"
-                android:minHeight="240dp"
-                android:padding="10dp"
-                app:layout_constraintLeft_toLeftOf="parent"
-                app:layout_constraintRight_toRightOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/imagePreviewText"
-                app:srcCompat="@android:drawable/stat_sys_warning" />
-        </androidx.constraintlayout.widget.ConstraintLayout>
-    </androidx.cardview.widget.CardView>
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="?attr/android:colorBackground"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
     <TextView
-        android:id="@+id/holdPhoneToPairTextView"
+        android:id="@+id/pageTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
-        android:text="@string/hold_phone_to_flash_text"
-        android:textSize="20sp"
+        android:text="@string/ready_to_flash_title"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:textColor="?attr/colorOnSurface"
+        android:layout_marginTop="24dp"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/previewImageWrapper" />
+        app:layout_constraintTop_toTopOf="parent" />
 
+    <TextView
+        android:id="@+id/instructionText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/hold_phone_to_flash_description"
+        android:textSize="16sp"
+        android:textAlignment="center"
+        android:textColor="?attr/colorOnSurface"
+        android:layout_marginTop="16dp"
+        android:layout_marginStart="48dp"
+        android:layout_marginEnd="48dp"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/pageTitle" />
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/previewImageWrapper"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginStart="24dp"
+        android:layout_marginEnd="24dp"
+        android:layout_marginTop="24dp"
+        android:layout_marginBottom="48dp"
+        app:cardElevation="4dp"
+        app:cardCornerRadius="20dp"
+        app:strokeWidth="0dp"
+        app:cardBackgroundColor="?attr/colorPrimaryContainer"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/instructionText"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <ImageView
+            android:id="@+id/previewImageView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:contentDescription="@string/image_preview_content_description"
+            android:padding="24dp"
+            android:scaleType="fitCenter"
+            app:srcCompat="@android:drawable/stat_sys_warning" />
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Progress Modal Overlay -->
+    <View
+        android:id="@+id/modalBackground"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="#CC000000"
+        android:visibility="gone"
+        android:elevation="16dp"
+        android:clickable="true"
+        android:focusable="true"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/whileFlashingArea"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginStart="32dp"
+        android:layout_marginEnd="32dp"
+        android:elevation="20dp"
+        android:visibility="gone"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="@id/previewImageWrapper"
-        android:layout_marginTop="414dp"
-        android:visibility="gone"
-        >
-        <androidx.cardview.widget.CardView
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent">
+        
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
-            android:layout_height="match_parent">
+            android:layout_height="wrap_content"
+            app:cardBackgroundColor="@color/white"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="8dp"
+            app:strokeWidth="0dp"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent">
             <include layout="@layout/nfc_write_dialog" />
-        </androidx.cardview.widget.CardView>
+        </com.google.android.material.card.MaterialCardView>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
