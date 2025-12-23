@@ -77,7 +77,7 @@ class MainActivity : AppCompatActivity() {
             val setup = PickSetup()
                 .setTitle("Select image with QR code")
                 .setMaxSize(2000) // higher resolution for better QR detection
-                .setPickTypes(EPickType.GALLERY, EPickType.CAMERA)
+                .setPickTypes(EPickType.GALLERY)
                 .setSystemDialog(false)
             PickImageDialog.build(setup).setOnPickResult { result ->
                 if (result.error != null) {
