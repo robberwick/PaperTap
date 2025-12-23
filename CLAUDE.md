@@ -68,9 +68,11 @@ Build → Build Bundle(s) / APK(s) → Build APK(s)
 
 **TicketData**: Data class for decoded rail ticket information
 
-- Stores origin/destination, travel date/time, fare type, class
+- Stores origin/destination, travel date/time, fare type, class, ticket reference
 - JSON serialization for SharedPreferences persistence
 - Only populated for UK rail tickets (RSP6 Aztec codes)
+- Provides `getJourneySummary()` for backward compatibility (returns "Origin → Dest | Date Time")
+- Note: Time is hidden if "00:00" (indicates no specific departure time)
 
 **Preferences**: SharedPreferences wrapper
 
@@ -125,6 +127,35 @@ ML Kit supports multiple 2D barcode formats:
 - Bounding box extraction with configurable padding
 - UK rail tickets use AZTEC format with RSP6 encoding
 
+### Ticket Details Display
+
+When UK rail ticket data is available, it's displayed in a compact 4-line layout:
+
+**Layout Pattern:**
+1. **Line 1** (bold, 16sp): Origin → Destination
+2. **Line 2** (normal, 14sp): Date Time (time hidden if "00:00")
+3. **Line 3** (normal, 14sp): Ticket Type • Class
+4. **Line 4** (monospace, 12sp, muted): Ref: XXXXXXXXXXXX
+
+**Implementation:**
+- XML: Separate TextViews for each line (ticketJourneySummary, ticketDateTime, ticketType, ticketReference)
+- Kotlin: Each element shows/hides independently based on data availability
+- Used in both MainActivity (reflash screen) and NfcFlasher (flashing screen)
+- Reference displayed in monospace with 0.7 alpha for visual de-emphasis
+
+### Document Selection
+
+User can select images or PDFs via the "Select image with QR code" button:
+
+**Implementation:**
+- Uses Android's native `ACTION_OPEN_DOCUMENT` intent (not PickImageDialog library)
+- Supports MIME types: `image/*` and `application/pdf`
+- Request code: `REQUEST_PICK_DOCUMENT = 1001`
+- Result routing in `onActivityResult`:
+  - PDFs → `handlePdfShare()` → PdfQrExtractor
+  - Images → `handleImageQrExtraction()` → ML Kit barcode scanning
+- No camera option (removed for UX simplicity - camera QR scanning unreliable)
+
 ## Common Gotchas
 
 **NFC Issues**:
@@ -157,7 +188,19 @@ ML Kit supports multiple 2D barcode formats:
 
 - MainActivity registers for SEND intents (image/*, application/pdf, text/*)
 - ACTION_VIEW support for direct URL opens (e.g., browser "Open with" feature)
+- ACTION_OPEN_DOCUMENT for gallery picker (supports both images and PDFs)
 - NfcFlasher uses launchMode="singleTask" to avoid multiple instances
+
+**Ticket Data Flow**:
+
+1. QR/Aztec code detected → Check if AZTEC format
+2. If AZTEC → Attempt RSP6 decoding via `rsp6-decoder-kotlin`
+3. On success → Create TicketData with decoded fields:
+   - Station NLC codes → Human names via StationLookup
+   - Fare codes → Descriptions via FareCodeLookup
+   - Extract ticketReference, dates, times, class
+4. Store in SharedPreferences via Preferences.saveTicketData()
+5. Display in ticket details card (both MainActivity and NfcFlasher)
 
 **Audio Feedback**:
 
