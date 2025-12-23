@@ -48,6 +48,7 @@ object PrefKeys {
     var GeneratedImgPath = "Generated_Image_Path"
     var QrPadding = "Qr_Padding"
     var TicketData = "Ticket_Data"
+    var ShowTicketReference = "Show_Ticket_Reference"
 }
 
 object IntentKeys {

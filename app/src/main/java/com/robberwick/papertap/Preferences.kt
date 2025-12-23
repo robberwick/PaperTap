@@ -95,4 +95,15 @@ class Preferences {
             apply()
         }
     }
+
+    fun getShowTicketReference(): Boolean {
+        return getPreferences().getBoolean(PreferenceKeys.ShowTicketReference, false)
+    }
+
+    fun setShowTicketReference(show: Boolean) {
+        with(getPreferences().edit()) {
+            putBoolean(PreferenceKeys.ShowTicketReference, show)
+            apply()
+        }
+    }
 }

@@ -262,27 +262,28 @@ class MainActivity : AppCompatActivity() {
                 
                 if (result != null) {
                     val (qrBitmap, ticketData) = result
-                    
+
                     // QR code found, now crop/resize it
                     val message = if (ticketData != null) {
                         "Ticket found! ${ticketData.getJourneySummary()}"
                     } else {
                         "QR code found! Processing..."
                     }
-                    
+
                     Toast.makeText(
                         this@MainActivity,
                         message,
                         Toast.LENGTH_SHORT
                     ).show()
-                    
+
                     // Store ticket data if available
                     if (ticketData != null) {
                         mPreferencesController!!.saveTicketData(ticketData)
                     }
-                    
+
                     val (sw, sh) = mPreferencesController!!.getScreenSizePixels()
-                    val processedBitmap = convertToBlackAndWhite(qrBitmap)
+                    val withReference = addTicketReferenceToImage(qrBitmap, ticketData?.ticketReference)
+                    val processedBitmap = convertToBlackAndWhite(withReference)
                     val scaledBitmap = Bitmap.createScaledBitmap(processedBitmap, sw, sh, false)
                     flashBitmap(scaledBitmap)
                 } else {
@@ -532,10 +533,10 @@ class MainActivity : AppCompatActivity() {
         val width = source.width
         val height = source.height
         val result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        
+
         // Use threshold of 128 (middle grey) to decide black vs white
         val threshold = 128
-        
+
         for (x in 0 until width) {
             for (y in 0 until height) {
                 val pixel = source.getPixel(x, y)
@@ -544,13 +545,63 @@ class MainActivity : AppCompatActivity() {
                 val g = Color.green(pixel)
                 val b = Color.blue(pixel)
                 val luminance = (0.299 * r + 0.587 * g + 0.114 * b).toInt()
-                
+
                 // Set to pure black or pure white
                 val newColor = if (luminance < threshold) Color.BLACK else Color.WHITE
                 result.setPixel(x, y, newColor)
             }
         }
-        
+
+        return result
+    }
+
+    /**
+     * Add ticket reference text below the QR code if enabled
+     */
+    private fun addTicketReferenceToImage(qrBitmap: Bitmap, ticketReference: String?): Bitmap {
+        // Check if feature is enabled and we have a reference
+        val showReference = mPreferencesController?.getShowTicketReference() ?: false
+        if (!showReference || ticketReference.isNullOrEmpty()) {
+            return qrBitmap
+        }
+
+        // Calculate text size based on image width
+        // Aim for text to be about 1/15th of the image height
+        val textSizePx = (qrBitmap.width / 15f).coerceAtLeast(12f)
+
+        // Create paint for text
+        val paint = android.graphics.Paint().apply {
+            color = Color.BLACK
+            textSize = textSizePx
+            typeface = android.graphics.Typeface.MONOSPACE
+            isAntiAlias = false  // Keep crisp for e-ink
+            textAlign = android.graphics.Paint.Align.CENTER
+        }
+
+        // Measure text dimensions
+        val textBounds = android.graphics.Rect()
+        paint.getTextBounds(ticketReference, 0, ticketReference.length, textBounds)
+        val textHeight = textBounds.height()
+
+        // Calculate spacing between QR code and text (about 1/20th of width)
+        val spacing = (qrBitmap.width / 20f).toInt().coerceAtLeast(5)
+
+        // Create new bitmap with extra height for text
+        val totalHeight = qrBitmap.height + spacing + textHeight + spacing
+        val result = Bitmap.createBitmap(qrBitmap.width, totalHeight, Bitmap.Config.ARGB_8888)
+
+        // Fill with white background
+        val canvas = android.graphics.Canvas(result)
+        canvas.drawColor(Color.WHITE)
+
+        // Draw the QR code at the top
+        canvas.drawBitmap(qrBitmap, 0f, 0f, null)
+
+        // Draw the text centered below the QR code
+        val textX = qrBitmap.width / 2f
+        val textY = qrBitmap.height + spacing + textHeight.toFloat()
+        canvas.drawText(ticketReference, textX, textY, paint)
+
         return result
     }
     
@@ -569,27 +620,28 @@ class MainActivity : AppCompatActivity() {
                 
                 if (result != null) {
                     val (qrBitmap, ticketData) = result
-                    
+
                     // QR code found, process and flash it
                     val message = if (ticketData != null) {
                         "Ticket found! ${ticketData.getJourneySummary()}"
                     } else {
                         "QR code found! Processing..."
                     }
-                    
+
                     Toast.makeText(
                         this@MainActivity,
                         message,
                         Toast.LENGTH_SHORT
                     ).show()
-                    
+
                     // Store ticket data if available
                     if (ticketData != null) {
                         mPreferencesController!!.saveTicketData(ticketData)
                     }
-                    
+
                     val (sw, sh) = mPreferencesController!!.getScreenSizePixels()
-                    val processedBitmap = convertToBlackAndWhite(qrBitmap)
+                    val withReference = addTicketReferenceToImage(qrBitmap, ticketData?.ticketReference)
+                    val processedBitmap = convertToBlackAndWhite(withReference)
                     val scaledBitmap = Bitmap.createScaledBitmap(processedBitmap, sw, sh, false)
                     flashBitmap(scaledBitmap)
                 } else {

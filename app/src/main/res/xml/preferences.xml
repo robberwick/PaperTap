@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <!-- Display Settings -->
+    <PreferenceCategory
+        android:title="Display"
+        android:iconSpaceReserved="false">
+
+        <ListPreference
+            android:key="Display_Size"
+            android:title="Display Size"
+            android:summary="%s"
+            android:entries="@array/screen_sizes"
+            android:entryValues="@array/screen_sizes"
+            android:defaultValue="1.54&quot; v.B"
+            android:iconSpaceReserved="false" />
+
+    </PreferenceCategory>
+
+    <!-- QR Code Settings -->
+    <PreferenceCategory
+        android:title="QR Code Settings"
+        android:iconSpaceReserved="false">
+
+        <SeekBarPreference
+            android:key="Qr_Padding"
+            android:title="QR Code Padding"
+            android:summary="Extra space around detected QR codes"
+            android:defaultValue="5"
+            android:max="50"
+            app:showSeekBarValue="true"
+            app:seekBarIncrement="1"
+            android:iconSpaceReserved="false" />
+
+        <SwitchPreferenceCompat
+            android:key="Show_Ticket_Reference"
+            android:title="Show Ticket Reference"
+            android:summary="Display the ticket reference number below the QR code (e.g., TRG7JF3BVVN)"
+            android:defaultValue="false"
+            android:iconSpaceReserved="false" />
+
+    </PreferenceCategory>
+
+</androidx.preference.PreferenceScreen>
