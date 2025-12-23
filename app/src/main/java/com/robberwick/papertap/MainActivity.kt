@@ -18,9 +18,6 @@ import com.google.android.material.card.MaterialCardView
 import androidx.lifecycle.lifecycleScope
 import com.canhub.cropper.CropImage
 import com.canhub.cropper.CropImageView
-import com.vansuita.pickimage.bundle.PickSetup
-import com.vansuita.pickimage.dialog.PickImageDialog
-import com.vansuita.pickimage.enums.EPickType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -36,6 +33,10 @@ class MainActivity : AppCompatActivity() {
     private var mHasReFlashableImage: Boolean = false
     private var mSharedImageUri: Uri? = null
     private var mSharedText: String? = null
+
+    companion object {
+        private const val REQUEST_PICK_DOCUMENT = 1001
+    }
 
 
 
@@ -74,21 +75,13 @@ class MainActivity : AppCompatActivity() {
         // Setup QR extraction button
         val extractQrCTA: Button = findViewById(R.id.cta_extract_qr)
         extractQrCTA.setOnClickListener {
-            val setup = PickSetup()
-                .setTitle("Select image with QR code")
-                .setMaxSize(2000) // higher resolution for better QR detection
-                .setPickTypes(EPickType.GALLERY)
-                .setSystemDialog(false)
-            PickImageDialog.build(setup).setOnPickResult { result ->
-                if (result.error != null) {
-                    Toast.makeText(this, result.error.toString(), Toast.LENGTH_LONG).show()
-                    return@setOnPickResult
-                }
-                val bitmap = result.bitmap
-                if (bitmap != null) {
-                    handleImageQrExtraction(bitmap)
-                }
-            }.show(this)
+            // Use native document picker to support both images and PDFs
+            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "*/*"
+                putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("image/*", "application/pdf"))
+            }
+            startActivityForResult(intent, REQUEST_PICK_DOCUMENT)
         }
 
         // Set image uri if launched from another app
@@ -370,6 +363,38 @@ class MainActivity : AppCompatActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, resultData: Intent?) {
         super.onActivityResult(requestCode, resultCode, resultData)
+
+        // Handle document picker result (image or PDF)
+        if (requestCode == REQUEST_PICK_DOCUMENT && resultCode == Activity.RESULT_OK) {
+            val uri = resultData?.data
+            if (uri != null) {
+                val mimeType = contentResolver.getType(uri)
+                android.util.Log.d("MainActivity", "Picked document: $uri, mimeType: $mimeType")
+
+                if (mimeType == "application/pdf") {
+                    // Handle PDF
+                    handlePdfShare(uri)
+                } else if (mimeType?.startsWith("image/") == true) {
+                    // Handle image - load bitmap and extract QR
+                    try {
+                        val bitmap = contentResolver.openInputStream(uri)?.use { inputStream ->
+                            BitmapFactory.decodeStream(inputStream)
+                        }
+                        if (bitmap != null) {
+                            handleImageQrExtraction(bitmap)
+                        } else {
+                            Toast.makeText(this, "Failed to load image", Toast.LENGTH_LONG).show()
+                        }
+                    } catch (e: Exception) {
+                        Toast.makeText(this, "Error loading image: ${e.message}", Toast.LENGTH_LONG).show()
+                    }
+                } else {
+                    Toast.makeText(this, "Please select an image or PDF file", Toast.LENGTH_LONG).show()
+                }
+            }
+            return
+        }
+
         if (requestCode == CropImage.CROP_IMAGE_ACTIVITY_REQUEST_CODE) {
             val result = CropImage.getActivityResult(resultData)
             var error: String? = null
