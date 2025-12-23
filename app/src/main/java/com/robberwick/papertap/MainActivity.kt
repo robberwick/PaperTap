@@ -426,25 +426,44 @@ class MainActivity : AppCompatActivity() {
         val reflashImagePreview = findViewById<ImageView>(R.id.reflashButtonImage)
         val ticketDetailsCard = findViewById<MaterialCardView>(R.id.ticketDetailsCard)
         val ticketJourneySummary = findViewById<TextView>(R.id.ticketJourneySummary)
+        val ticketDateTime = findViewById<TextView>(R.id.ticketDateTime)
         val ticketType = findViewById<TextView>(R.id.ticketType)
-        
+        val ticketReference = findViewById<TextView>(R.id.ticketReference)
+
         if (lastGeneratedFile.exists()) {
             // Hide welcome, show reflash UI
             mHasReFlashableImage = true
             welcomeCard.visibility = android.view.View.GONE
             reflashButton.visibility = android.view.View.VISIBLE
             reflashPreviewCard.visibility = android.view.View.VISIBLE
-            
+
             // Need to set null first, or else Android will cache previous image
             reflashImagePreview.setImageURI(null)
             reflashImagePreview.setImageURI(Uri.fromFile(lastGeneratedFile))
-            
+
             // Show ticket details if available
             val ticketData = mPreferencesController!!.getTicketData()
             if (ticketData != null) {
                 ticketDetailsCard.visibility = android.view.View.VISIBLE
-                ticketJourneySummary.text = ticketData.getJourneySummary()
-                
+
+                // Journey summary (just origin → destination)
+                val origin = ticketData.originStation ?: "Unknown"
+                val dest = ticketData.destinationStation ?: "Unknown"
+                ticketJourneySummary.text = "$origin → $dest"
+
+                // Date and time
+                val date = ticketData.travelDate ?: ""
+                val time = ticketData.travelTime ?: ""
+                val shouldShowTime = time.isNotEmpty() && time != "00:00"
+
+                if (date.isNotEmpty()) {
+                    ticketDateTime.text = if (shouldShowTime) "$date $time" else date
+                    ticketDateTime.visibility = android.view.View.VISIBLE
+                } else {
+                    ticketDateTime.visibility = android.view.View.GONE
+                }
+
+                // Ticket type and class
                 val typeText = buildString {
                     ticketData.ticketType?.let { append(it) }
                     if (ticketData.ticketClass != null && ticketData.ticketType != null) {
@@ -452,12 +471,20 @@ class MainActivity : AppCompatActivity() {
                     }
                     ticketData.ticketClass?.let { append(it) }
                 }
-                
+
                 if (typeText.isNotEmpty()) {
                     ticketType.text = typeText
                     ticketType.visibility = android.view.View.VISIBLE
                 } else {
                     ticketType.visibility = android.view.View.GONE
+                }
+
+                // Ticket reference
+                if (ticketData.ticketReference != null) {
+                    ticketReference.text = "Ref: ${ticketData.ticketReference}"
+                    ticketReference.visibility = android.view.View.VISIBLE
+                } else {
+                    ticketReference.visibility = android.view.View.GONE
                 }
             } else {
                 ticketDetailsCard.visibility = android.view.View.GONE
@@ -644,6 +671,7 @@ class MainActivity : AppCompatActivity() {
                 ticketType = fareName,
                 railcardType = if (ticket.discountCode > 0) "Code ${ticket.discountCode}" else null,
                 ticketClass = if (ticket.standardClass) "Standard" else "First",
+                ticketReference = ticket.ticketReference,
                 rawData = rawValue
             )
         } catch (e: com.robberwick.rsp6.Rsp6DecoderException) {

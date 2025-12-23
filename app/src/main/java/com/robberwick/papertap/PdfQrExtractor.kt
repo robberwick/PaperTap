@@ -150,6 +150,7 @@ class PdfQrExtractor(private val context: Context) {
                 ticketType = fareName,
                 railcardType = if (ticket.discountCode > 0) "Code ${ticket.discountCode}" else null,
                 ticketClass = if (ticket.standardClass) "Standard" else "First",
+                ticketReference = ticket.ticketReference,
                 rawData = rawValue
             )
         } catch (e: com.robberwick.rsp6.Rsp6DecoderException) {

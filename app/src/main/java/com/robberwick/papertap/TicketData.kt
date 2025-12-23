@@ -10,6 +10,7 @@ data class TicketData(
     val ticketType: String?,
     val railcardType: String?,
     val ticketClass: String?,
+    val ticketReference: String?,
     val rawData: String
 ) {
     fun toJson(): String {
@@ -21,6 +22,7 @@ data class TicketData(
         json.put("ticketType", ticketType)
         json.put("railcardType", railcardType)
         json.put("ticketClass", ticketClass)
+        json.put("ticketReference", ticketReference)
         json.put("rawData", rawData)
         return json.toString()
     }
@@ -55,6 +57,7 @@ data class TicketData(
                     ticketType = json.optString("ticketType").takeIf { it.isNotEmpty() },
                     railcardType = json.optString("railcardType").takeIf { it.isNotEmpty() },
                     ticketClass = json.optString("ticketClass").takeIf { it.isNotEmpty() },
+                    ticketReference = json.optString("ticketReference").takeIf { it.isNotEmpty() },
                     rawData = json.getString("rawData")
                 )
             } catch (e: Exception) {

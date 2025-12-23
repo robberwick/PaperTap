@@ -217,12 +217,31 @@ class NfcFlasher : AppCompatActivity() {
         val ticketData = preferences.getTicketData()
         val ticketDetailsCard = findViewById<com.google.android.material.card.MaterialCardView>(R.id.flasherTicketDetailsCard)
         val ticketJourneySummary = findViewById<android.widget.TextView>(R.id.flasherTicketJourneySummary)
+        val ticketDateTime = findViewById<android.widget.TextView>(R.id.flasherTicketDateTime)
         val ticketType = findViewById<android.widget.TextView>(R.id.flasherTicketType)
-        
+        val ticketReference = findViewById<android.widget.TextView>(R.id.flasherTicketReference)
+
         if (ticketData != null) {
             ticketDetailsCard.visibility = android.view.View.VISIBLE
-            ticketJourneySummary.text = ticketData.getJourneySummary()
-            
+
+            // Journey summary (just origin → destination)
+            val origin = ticketData.originStation ?: "Unknown"
+            val dest = ticketData.destinationStation ?: "Unknown"
+            ticketJourneySummary.text = "$origin → $dest"
+
+            // Date and time
+            val date = ticketData.travelDate ?: ""
+            val time = ticketData.travelTime ?: ""
+            val shouldShowTime = time.isNotEmpty() && time != "00:00"
+
+            if (date.isNotEmpty()) {
+                ticketDateTime.text = if (shouldShowTime) "$date $time" else date
+                ticketDateTime.visibility = android.view.View.VISIBLE
+            } else {
+                ticketDateTime.visibility = android.view.View.GONE
+            }
+
+            // Ticket type and class
             val typeText = buildString {
                 ticketData.ticketType?.let { append(it) }
                 if (ticketData.ticketClass != null && ticketData.ticketType != null) {
@@ -230,12 +249,20 @@ class NfcFlasher : AppCompatActivity() {
                 }
                 ticketData.ticketClass?.let { append(it) }
             }
-            
+
             if (typeText.isNotEmpty()) {
                 ticketType.text = typeText
                 ticketType.visibility = android.view.View.VISIBLE
             } else {
                 ticketType.visibility = android.view.View.GONE
+            }
+
+            // Ticket reference
+            if (ticketData.ticketReference != null) {
+                ticketReference.text = "Ref: ${ticketData.ticketReference}"
+                ticketReference.visibility = android.view.View.VISIBLE
+            } else {
+                ticketReference.visibility = android.view.View.GONE
             }
         } else {
             ticketDetailsCard.visibility = android.view.View.GONE

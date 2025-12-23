@@ -18,6 +18,7 @@ class TicketDataTest {
             ticketType = "Advance Single",
             railcardType = null,
             ticketClass = "Standard",
+            ticketReference = null,
             rawData = "test"
         )
 
@@ -37,6 +38,7 @@ class TicketDataTest {
             ticketType = "Anytime Day Single",
             railcardType = null,
             ticketClass = "Standard",
+            ticketReference = null,
             rawData = "test"
         )
 
@@ -56,6 +58,7 @@ class TicketDataTest {
             ticketType = "Off-Peak Single",
             railcardType = null,
             ticketClass = "Standard",
+            ticketReference = null,
             rawData = "test"
         )
 
@@ -75,6 +78,7 @@ class TicketDataTest {
             ticketType = "Off-Peak Single",
             railcardType = null,
             ticketClass = "Standard",
+            ticketReference = null,
             rawData = "test"
         )
 
@@ -94,6 +98,7 @@ class TicketDataTest {
             ticketType = "Season Ticket",
             railcardType = null,
             ticketClass = "Standard",
+            ticketReference = null,
             rawData = "test"
         )
 
@@ -113,6 +118,7 @@ class TicketDataTest {
             ticketType = "Season Ticket",
             railcardType = null,
             ticketClass = "Standard",
+            ticketReference = null,
             rawData = "test"
         )
 
@@ -132,6 +138,7 @@ class TicketDataTest {
             ticketType = "Advance Single",
             railcardType = null,
             ticketClass = "Standard",
+            ticketReference = null,
             rawData = "test"
         )
 
@@ -151,6 +158,7 @@ class TicketDataTest {
             ticketType = null,
             railcardType = null,
             ticketClass = null,
+            ticketReference = null,
             rawData = "test"
         )
 

@@ -89,7 +89,16 @@
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:textColor="?attr/colorOnPrimaryContainer"
-                android:text="London → Manchester | 15:30" />
+                android:text="London → Manchester" />
+
+            <TextView
+                android:id="@+id/flasherTicketDateTime"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textSize="14sp"
+                android:textColor="?attr/colorOnPrimaryContainer"
+                android:text="2024-01-15 14:30" />
 
             <TextView
                 android:id="@+id/flasherTicketType"
@@ -98,7 +107,18 @@
                 android:layout_marginTop="4dp"
                 android:textSize="14sp"
                 android:textColor="?attr/colorOnPrimaryContainer"
-                android:text="Advance Single" />
+                android:text="Advance Single • Standard" />
+
+            <TextView
+                android:id="@+id/flasherTicketReference"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textSize="12sp"
+                android:fontFamily="monospace"
+                android:textColor="?attr/colorOnPrimaryContainer"
+                android:alpha="0.7"
+                android:text="Ref: ABC123456789" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
