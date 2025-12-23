@@ -72,4 +72,27 @@ class Preferences {
             apply()
         }
     }
+    
+    fun saveTicketData(ticketData: TicketData) {
+        with(getPreferences().edit()) {
+            putString(PreferenceKeys.TicketData, ticketData.toJson())
+            apply()
+        }
+    }
+    
+    fun getTicketData(): TicketData? {
+        val json = getPreferences().getString(PreferenceKeys.TicketData, null)
+        return if (json != null) {
+            TicketData.fromJson(json)
+        } else {
+            null
+        }
+    }
+    
+    fun clearTicketData() {
+        with(getPreferences().edit()) {
+            remove(PreferenceKeys.TicketData)
+            apply()
+        }
+    }
 }

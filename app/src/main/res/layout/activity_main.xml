@@ -97,6 +97,46 @@
                 app:iconGravity="start"
                 android:textSize="16sp" />
 
+            <!-- Ticket details card - shown when ticket data is available -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/ticketDetailsCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="24dp"
+                android:layout_marginEnd="24dp"
+                android:layout_marginTop="16dp"
+                android:visibility="gone"
+                app:cardBackgroundColor="?attr/colorPrimaryContainer"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:strokeWidth="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:id="@+id/ticketJourneySummary"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="?attr/colorOnPrimaryContainer"
+                        android:text="London → Manchester | 15:30" />
+
+                    <TextView
+                        android:id="@+id/ticketType"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:textSize="14sp"
+                        android:textColor="?attr/colorOnPrimaryContainer"
+                        android:text="Advance Single" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
             <!-- Preview of last flashed image -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/reflashPreviewCard"

@@ -1,2 +1,12 @@
 include ':app'
 rootProject.name = "PaperTap"
+
+// Only include composite build if sibling project exists (for local development)
+def rsp6DecoderPath = file('../rsp6-decoder-kotlin')
+if (rsp6DecoderPath.exists()) {
+    includeBuild('../rsp6-decoder-kotlin') {
+        dependencySubstitution {
+            substitute module('com.github.robberwick:rsp6-decoder-kotlin') using project(':lib')
+        }
+    }
+}

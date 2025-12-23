@@ -212,6 +212,35 @@ class NfcFlasher : AppCompatActivity() {
             this.mBitmap = BitmapFactory.decodeFile(newImgFileUri.path, bmOptions)
         }
         
+        // Load and display ticket details if available
+        val preferences = Preferences(this)
+        val ticketData = preferences.getTicketData()
+        val ticketDetailsCard = findViewById<com.google.android.material.card.MaterialCardView>(R.id.flasherTicketDetailsCard)
+        val ticketJourneySummary = findViewById<android.widget.TextView>(R.id.flasherTicketJourneySummary)
+        val ticketType = findViewById<android.widget.TextView>(R.id.flasherTicketType)
+        
+        if (ticketData != null) {
+            ticketDetailsCard.visibility = android.view.View.VISIBLE
+            ticketJourneySummary.text = ticketData.getJourneySummary()
+            
+            val typeText = buildString {
+                ticketData.ticketType?.let { append(it) }
+                if (ticketData.ticketClass != null && ticketData.ticketType != null) {
+                    append(" • ")
+                }
+                ticketData.ticketClass?.let { append(it) }
+            }
+            
+            if (typeText.isNotEmpty()) {
+                ticketType.text = typeText
+                ticketType.visibility = android.view.View.VISIBLE
+            } else {
+                ticketType.visibility = android.view.View.GONE
+            }
+        } else {
+            ticketDetailsCard.visibility = android.view.View.GONE
+        }
+        
         this.startNfcCheckLoop()
         this.enableForegroundDispatch()
     }

@@ -261,19 +261,32 @@ class MainActivity : AppCompatActivity() {
         
         lifecycleScope.launch {
             try {
-                val qrBitmap = withContext(Dispatchers.IO) {
+                val result = withContext(Dispatchers.IO) {
                     val extractor = PdfQrExtractor(this@MainActivity)
                     val padding = mPreferencesController!!.getQrPadding()
                     extractor.extractQrCodeFromPdf(pdfUri, padding)
                 }
                 
-                if (qrBitmap != null) {
+                if (result != null) {
+                    val (qrBitmap, ticketData) = result
+                    
                     // QR code found, now crop/resize it
+                    val message = if (ticketData != null) {
+                        "Ticket found! ${ticketData.getJourneySummary()}"
+                    } else {
+                        "QR code found! Processing..."
+                    }
+                    
                     Toast.makeText(
                         this@MainActivity,
-                        "QR code found! Processing...",
+                        message,
                         Toast.LENGTH_SHORT
                     ).show()
+                    
+                    // Store ticket data if available
+                    if (ticketData != null) {
+                        mPreferencesController!!.saveTicketData(ticketData)
+                    }
                     
                     val (sw, sh) = mPreferencesController!!.getScreenSizePixels()
                     val processedBitmap = convertToBlackAndWhite(qrBitmap)
@@ -411,6 +424,9 @@ class MainActivity : AppCompatActivity() {
         val reflashButton = findViewById<Button>(R.id.reflashButton)
         val reflashPreviewCard = findViewById<MaterialCardView>(R.id.reflashPreviewCard)
         val reflashImagePreview = findViewById<ImageView>(R.id.reflashButtonImage)
+        val ticketDetailsCard = findViewById<MaterialCardView>(R.id.ticketDetailsCard)
+        val ticketJourneySummary = findViewById<TextView>(R.id.ticketJourneySummary)
+        val ticketType = findViewById<TextView>(R.id.ticketType)
         
         if (lastGeneratedFile.exists()) {
             // Hide welcome, show reflash UI
@@ -422,12 +438,37 @@ class MainActivity : AppCompatActivity() {
             // Need to set null first, or else Android will cache previous image
             reflashImagePreview.setImageURI(null)
             reflashImagePreview.setImageURI(Uri.fromFile(lastGeneratedFile))
+            
+            // Show ticket details if available
+            val ticketData = mPreferencesController!!.getTicketData()
+            if (ticketData != null) {
+                ticketDetailsCard.visibility = android.view.View.VISIBLE
+                ticketJourneySummary.text = ticketData.getJourneySummary()
+                
+                val typeText = buildString {
+                    ticketData.ticketType?.let { append(it) }
+                    if (ticketData.ticketClass != null && ticketData.ticketType != null) {
+                        append(" • ")
+                    }
+                    ticketData.ticketClass?.let { append(it) }
+                }
+                
+                if (typeText.isNotEmpty()) {
+                    ticketType.text = typeText
+                    ticketType.visibility = android.view.View.VISIBLE
+                } else {
+                    ticketType.visibility = android.view.View.GONE
+                }
+            } else {
+                ticketDetailsCard.visibility = android.view.View.GONE
+            }
         } else {
             // Show welcome, hide reflash UI
             mHasReFlashableImage = false
             welcomeCard.visibility = android.view.View.VISIBLE
             reflashButton.visibility = android.view.View.GONE
             reflashPreviewCard.visibility = android.view.View.GONE
+            ticketDetailsCard.visibility = android.view.View.GONE
         }
     }
     
@@ -469,18 +510,31 @@ class MainActivity : AppCompatActivity() {
         
         lifecycleScope.launch {
             try {
-                val qrBitmap = withContext(Dispatchers.IO) {
+                val result = withContext(Dispatchers.IO) {
                     val padding = mPreferencesController!!.getQrPadding()
                     extractQrFromBitmap(bitmap, padding)
                 }
                 
-                if (qrBitmap != null) {
+                if (result != null) {
+                    val (qrBitmap, ticketData) = result
+                    
                     // QR code found, process and flash it
+                    val message = if (ticketData != null) {
+                        "Ticket found! ${ticketData.getJourneySummary()}"
+                    } else {
+                        "QR code found! Processing..."
+                    }
+                    
                     Toast.makeText(
                         this@MainActivity,
-                        "QR code found! Processing...",
+                        message,
                         Toast.LENGTH_SHORT
                     ).show()
+                    
+                    // Store ticket data if available
+                    if (ticketData != null) {
+                        mPreferencesController!!.saveTicketData(ticketData)
+                    }
                     
                     val (sw, sh) = mPreferencesController!!.getScreenSizePixels()
                     val processedBitmap = convertToBlackAndWhite(qrBitmap)
@@ -508,7 +562,7 @@ class MainActivity : AppCompatActivity() {
     /**
      * Extract QR code from bitmap using ML Kit barcode scanning
      */
-    private suspend fun extractQrFromBitmap(bitmap: Bitmap, padding: Int): Bitmap? = suspendCoroutine { continuation ->
+    private suspend fun extractQrFromBitmap(bitmap: Bitmap, padding: Int): Pair<Bitmap, TicketData?>? = suspendCoroutine { continuation ->
         val options = com.google.mlkit.vision.barcode.BarcodeScannerOptions.Builder()
             .setBarcodeFormats(
                 com.google.mlkit.vision.barcode.common.Barcode.FORMAT_QR_CODE,
@@ -533,6 +587,12 @@ class MainActivity : AppCompatActivity() {
                     
                     android.util.Log.d("MainActivity", "Barcode format: ${barcode.format}, value: ${barcode.rawValue?.take(50)}")
                     
+                    // Attempt to decode if it's an Aztec code
+                    var ticketData: TicketData? = null
+                    if (barcode.format == com.google.mlkit.vision.barcode.common.Barcode.FORMAT_AZTEC && barcode.rawValue != null) {
+                        ticketData = decodeTicketData(barcode.rawValue!!)
+                    }
+                    
                     if (boundingBox != null) {
                         android.util.Log.d("MainActivity", "Bounding box: $boundingBox")
                         android.util.Log.d("MainActivity", "Using padding: $padding pixels")
@@ -543,7 +603,7 @@ class MainActivity : AppCompatActivity() {
                         
                         val croppedBitmap = Bitmap.createBitmap(bitmap, left, top, width, height)
                         android.util.Log.d("MainActivity", "Cropped bitmap: ${croppedBitmap.width}x${croppedBitmap.height}")
-                        continuation.resume(croppedBitmap)
+                        continuation.resume(Pair(croppedBitmap, ticketData))
                     } else {
                         android.util.Log.w("MainActivity", "Barcode found but no bounding box")
                         continuation.resume(null)
@@ -558,6 +618,41 @@ class MainActivity : AppCompatActivity() {
                 e.printStackTrace()
                 continuation.resume(null)
             }
+    }
+    
+    private fun decodeTicketData(rawValue: String): TicketData? {
+        return try {
+            android.util.Log.d("MainActivity", "Attempting to decode Aztec ticket data")
+            val ticket = com.robberwick.rsp6.Rsp6Decoder.decode(rawValue)
+            
+            // Initialize lookups if not already done
+            StationLookup.init(this)
+            FareCodeLookup.init(this)
+            
+            // Convert NLC codes to station names
+            val originStation = StationLookup.getStationName(ticket.originNlc)
+            val destinationStation = StationLookup.getStationName(ticket.destinationNlc)
+            
+            // Convert fare code to human-readable name
+            val fareName = FareCodeLookup.getFareName(ticket.fare)
+
+            TicketData(
+                originStation = originStation,
+                destinationStation = destinationStation,
+                travelDate = ticket.startDate.toString(),
+                travelTime = ticket.departTime.toString(),
+                ticketType = fareName,
+                railcardType = if (ticket.discountCode > 0) "Code ${ticket.discountCode}" else null,
+                ticketClass = if (ticket.standardClass) "Standard" else "First",
+                rawData = rawValue
+            )
+        } catch (e: com.robberwick.rsp6.Rsp6DecoderException) {
+            android.util.Log.e("MainActivity", "Failed to decode RSP6 ticket", e)
+            null
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Failed to decode ticket data", e)
+            null
+        }
     }
 
 }

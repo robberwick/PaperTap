@@ -17,7 +17,7 @@ class PdfQrExtractor(private val context: Context) {
     
     private val TAG = "PdfQrExtractor"
 
-    suspend fun extractQrCodeFromPdf(pdfUri: Uri, padding: Int = 5): Bitmap? {
+    suspend fun extractQrCodeFromPdf(pdfUri: Uri, padding: Int = 5): Pair<Bitmap, TicketData?>? {
         var fileDescriptor: ParcelFileDescriptor? = null
         var pdfRenderer: PdfRenderer? = null
         
@@ -46,10 +46,10 @@ class PdfQrExtractor(private val context: Context) {
                 page.close()
                 
                 // Try to find QR code in this page
-                val qrBitmap = extractQrFromBitmap(bitmap, padding)
-                if (qrBitmap != null) {
+                val result = extractQrFromBitmap(bitmap, padding)
+                if (result != null) {
                     Log.d(TAG, "QR code found on page $pageIndex")
-                    return qrBitmap
+                    return result
                 }
                 
                 bitmap.recycle()
@@ -67,7 +67,7 @@ class PdfQrExtractor(private val context: Context) {
         }
     }
     
-    private suspend fun extractQrFromBitmap(bitmap: Bitmap, padding: Int): Bitmap? = suspendCoroutine { continuation ->
+    private suspend fun extractQrFromBitmap(bitmap: Bitmap, padding: Int): Pair<Bitmap, TicketData?>? = suspendCoroutine { continuation ->
         val options = BarcodeScannerOptions.Builder()
             .setBarcodeFormats(
                 Barcode.FORMAT_QR_CODE,
@@ -92,6 +92,12 @@ class PdfQrExtractor(private val context: Context) {
                     
                     Log.d(TAG, "Barcode format: ${barcode.format}, value: ${barcode.rawValue?.take(50)}")
                     
+                    // Attempt to decode if it's an Aztec code
+                    var ticketData: TicketData? = null
+                    if (barcode.format == Barcode.FORMAT_AZTEC && barcode.rawValue != null) {
+                        ticketData = decodeTicketData(barcode.rawValue!!)
+                    }
+                    
                     if (boundingBox != null) {
                         Log.d(TAG, "Bounding box: $boundingBox")
                         // Use padding from settings
@@ -103,7 +109,7 @@ class PdfQrExtractor(private val context: Context) {
                         
                         val croppedBitmap = Bitmap.createBitmap(bitmap, left, top, width, height)
                         Log.d(TAG, "Cropped bitmap: ${croppedBitmap.width}x${croppedBitmap.height}")
-                        continuation.resume(croppedBitmap)
+                        continuation.resume(Pair(croppedBitmap, ticketData))
                     } else {
                         Log.w(TAG, "Barcode found but no bounding box")
                         continuation.resume(null)
@@ -118,5 +124,40 @@ class PdfQrExtractor(private val context: Context) {
                 e.printStackTrace()
                 continuation.resume(null)
             }
+    }
+    
+    private fun decodeTicketData(rawValue: String): TicketData? {
+        return try {
+            Log.d(TAG, "Attempting to decode Aztec ticket data")
+            val ticket = com.robberwick.rsp6.Rsp6Decoder.decode(rawValue)
+            
+            // Initialize lookups if not already done
+            StationLookup.init(context)
+            FareCodeLookup.init(context)
+            
+            // Convert NLC codes to station names
+            val originStation = StationLookup.getStationName(ticket.originNlc)
+            val destinationStation = StationLookup.getStationName(ticket.destinationNlc)
+            
+            // Convert fare code to human-readable name
+            val fareName = FareCodeLookup.getFareName(ticket.fare)
+            
+            TicketData(
+                originStation = originStation,
+                destinationStation = destinationStation,
+                travelDate = ticket.startDate.toString(),
+                travelTime = ticket.departTime.toString(),
+                ticketType = fareName,
+                railcardType = if (ticket.discountCode > 0) "Code ${ticket.discountCode}" else null,
+                ticketClass = if (ticket.standardClass) "Standard" else "First",
+                rawData = rawValue
+            )
+        } catch (e: com.robberwick.rsp6.Rsp6DecoderException) {
+            Log.e(TAG, "Failed to decode RSP6 ticket", e)
+            null
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to decode ticket data", e)
+            null
+        }
     }
 }

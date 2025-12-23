@@ -47,6 +47,7 @@ object PrefKeys {
     var DisplaySize = "Display_Size"
     var GeneratedImgPath = "Generated_Image_Path"
     var QrPadding = "Qr_Padding"
+    var TicketData = "Ticket_Data"
 }
 
 object IntentKeys {
