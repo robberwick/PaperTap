@@ -30,8 +30,11 @@ data class TicketData(
         val dest = destinationStation ?: "Unknown"
         val date = travelDate ?: ""
         val time = travelTime ?: ""
-        
-        return if (date.isNotEmpty() && time.isNotEmpty()) {
+
+        // Only show time if it's not empty and not "00:00"
+        val shouldShowTime = time.isNotEmpty() && time != "00:00"
+
+        return if (date.isNotEmpty() && shouldShowTime) {
             "$origin → $dest | $date $time"
         } else if (date.isNotEmpty()) {
             "$origin → $dest | $date"
