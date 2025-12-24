@@ -29,7 +29,6 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:fillViewport="true"
-        android:background="?attr/android:colorBackground"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <LinearLayout
@@ -82,18 +81,15 @@
             <!-- Reflash button - shown when previous image exists -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/reflashButton"
-                style="@style/Widget.Material3.Button.ElevatedButton"
+                style="@style/Widget.Material3.Button"
                 android:layout_width="match_parent"
                 android:layout_height="64dp"
                 android:layout_marginStart="24dp"
                 android:layout_marginEnd="24dp"
                 android:layout_marginTop="24dp"
-                android:backgroundTint="@color/white"
-                android:textColor="@color/blue_darkest"
                 android:text="@string/reflash_cta_text"
                 android:visibility="gone"
                 app:icon="@android:drawable/ic_popup_sync"
-                app:iconTint="@color/blue_dark"
                 app:iconGravity="start"
                 android:textSize="16sp" />
 
@@ -184,18 +180,15 @@
             <!-- Primary action button -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/cta_extract_qr"
-                style="@style/Widget.Material3.Button.ElevatedButton"
+                style="@style/Widget.Material3.Button"
                 android:layout_width="match_parent"
                 android:layout_height="64dp"
                 android:layout_marginStart="24dp"
                 android:layout_marginEnd="24dp"
                 android:layout_marginTop="24dp"
                 android:layout_marginBottom="24dp"
-                android:backgroundTint="@color/white"
-                android:textColor="@color/blue_darkest"
                 android:text="@string/cta_extract_qr_text"
                 app:icon="@android:drawable/ic_menu_search"
-                app:iconTint="@color/blue_dark"
                 app:iconGravity="start"
                 android:textSize="16sp" />
 

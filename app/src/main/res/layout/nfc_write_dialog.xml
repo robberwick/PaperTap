@@ -4,7 +4,6 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/white"
     android:padding="32dp">
 
     <TextView
@@ -14,7 +13,6 @@
         android:text="@string/pleaseWaitWhileFlashingText"
         android:textSize="18sp"
         android:textStyle="bold"
-        android:textColor="@color/blue_darkest"
         android:layout_marginBottom="24dp"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
@@ -26,8 +24,6 @@
         android:layout_height="wrap_content"
         android:indeterminate="false"
         android:max="100"
-        app:indicatorColor="@color/blue_dark"
-        app:trackColor="@color/blue_light"
         app:trackCornerRadius="8dp"
         app:trackThickness="8dp"
         app:layout_constraintLeft_toLeftOf="parent"

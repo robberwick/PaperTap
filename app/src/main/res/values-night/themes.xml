@@ -1,37 +1,44 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme - FORCED LIGHT MODE (same as values/themes.xml) -->
-    <style name="Theme.NFCEInkWriter" parent="Theme.Material3.Light.NoActionBar">
-        <!-- Primary brand color. -->
+    <!-- Base application theme - Material 3 Dark -->
+    <style name="Theme.NFCEInkWriter" parent="Theme.Material3.Dark.NoActionBar">
+        <!-- Primary brand color -->
         <item name="colorPrimary">@color/blue_dark</item>
         <item name="colorOnPrimary">@color/white</item>
-        <item name="colorPrimaryContainer">@color/blue_light</item>
-        <item name="colorOnPrimaryContainer">@color/blue_darkest</item>
-        
-        <!-- Secondary brand color. -->
-        <item name="colorSecondary">@color/tan_dark</item>
-        <item name="colorOnSecondary">@color/white</item>
-        <item name="colorSecondaryContainer">@color/tan_light</item>
-        <item name="colorOnSecondaryContainer">@color/tan_darkest</item>
-        
-        <!-- Force blue background - override all background attributes -->
-        <item name="colorSurface">@color/white</item>
-        <item name="colorSurfaceContainerLowest">@color/blue_dark</item>
-        <item name="colorSurfaceContainer">@color/blue_dark</item>
-        <item name="colorSurfaceContainerLow">@color/blue_dark</item>
-        <item name="colorSurfaceContainerHigh">@color/blue_dark</item>
-        <item name="colorSurfaceContainerHighest">@color/blue_dark</item>
-        <item name="colorOnSurface">@color/white</item>
-        <item name="android:colorBackground">@color/blue_dark</item>
-        <item name="android:windowBackground">@color/blue_dark</item>
-        
-        <!-- Status bar color. -->
-        <item name="android:statusBarColor">@color/blue_dark</item>
-        
-        <!-- Force light mode -->
-        <item name="android:forceDarkAllowed" tools:targetApi="q">false</item>
-        
+        <item name="colorPrimaryContainer">#FF2E3440</item>
+        <item name="colorOnPrimaryContainer">@color/blue_lighter</item>
+
+        <!-- Secondary brand color -->
+        <item name="colorSecondary">@color/tan_light</item>
+        <item name="colorOnSecondary">@color/tan_darkest</item>
+        <item name="colorSecondaryContainer">@color/tan_dark</item>
+        <item name="colorOnSecondaryContainer">@color/tan_light</item>
+
+        <!-- Surface colors (backgrounds for cards, dialogs, etc.) -->
+        <item name="colorSurface">#FF1E1E1E</item>
+        <item name="colorOnSurface">@color/blue_lighter</item>
+        <item name="colorSurfaceVariant">#FF2E2E2E</item>
+        <item name="colorOnSurfaceVariant">@color/blue_light</item>
+
+        <!-- Background color (main screen background) -->
+        <item name="android:colorBackground">@color/blue_darkest</item>
+        <item name="colorOnBackground">@color/blue_lighter</item>
+
+        <!-- Status bar -->
+        <item name="android:statusBarColor">@color/black</item>
+        <item name="android:windowLightStatusBar">false</item>
+
+        <!-- Navigation bar -->
+        <item name="android:navigationBarColor">@color/black</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">false</item>
+
         <!-- Material 3 shape theme -->
         <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.Material3.Corner.Medium</item>
         <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.Material3.Corner.Large</item>
     </style>
+
+    <!-- Toolbar Theme - white icons on primary color background -->
+    <style name="ToolbarTheme" parent="ThemeOverlay.Material3.Dark" />
+
+    <!-- Popup Menu Theme - for dark mode, keep it dark -->
+    <style name="PopupMenuTheme" parent="ThemeOverlay.Material3.Dark" />
 </resources>
