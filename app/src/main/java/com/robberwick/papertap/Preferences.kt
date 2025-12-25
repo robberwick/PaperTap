@@ -96,8 +96,41 @@ class Preferences {
         }
     }
 
+    fun saveBarcodeData(barcodeData: BarcodeData) {
+        with(getPreferences().edit()) {
+            putString(PreferenceKeys.BarcodeData, barcodeData.toJson())
+            apply()
+        }
+    }
+
+    fun getBarcodeData(): BarcodeData? {
+        val json = getPreferences().getString(PreferenceKeys.BarcodeData, null)
+        return if (json != null) {
+            BarcodeData.fromJson(json)
+        } else {
+            null
+        }
+    }
+
+    fun clearBarcodeData() {
+        with(getPreferences().edit()) {
+            remove(PreferenceKeys.BarcodeData)
+            apply()
+        }
+    }
+
     fun getShowTicketReference(): Boolean {
-        return getPreferences().getBoolean(PreferenceKeys.ShowTicketReference, false)
+        val prefs = getPreferences()
+        val result = prefs.getBoolean(PreferenceKeys.ShowTicketReference, false)
+
+        // Debug logging
+        android.util.Log.d("Preferences", "getShowTicketReference called")
+        android.util.Log.d("Preferences", "  Preference file: $Preference_File_Key")
+        android.util.Log.d("Preferences", "  Preference key: ${PreferenceKeys.ShowTicketReference}")
+        android.util.Log.d("Preferences", "  Result: $result")
+        android.util.Log.d("Preferences", "  All keys in file: ${prefs.all.keys}")
+
+        return result
     }
 
     fun setShowTicketReference(show: Boolean) {

@@ -91,10 +91,10 @@ class AddTicketActivity : AppCompatActivity() {
                 }
 
                 if (result != null) {
-                    val (qrBitmap, ticketData) = result
+                    val (qrBitmap, barcodeData) = result
                     extractedQrBitmap = qrBitmap
-                    extractedTicketData = ticketData
-                    displayPreview(qrBitmap, ticketData)
+                    extractedTicketData = barcodeData.ticketData
+                    displayPreview(qrBitmap, barcodeData.ticketData)
                 } else {
                     Toast.makeText(
                         this@AddTicketActivity,
@@ -115,13 +115,13 @@ class AddTicketActivity : AppCompatActivity() {
         }
     }
 
-    private suspend fun processPdf(uri: Uri): Pair<Bitmap, TicketData?>? {
+    private suspend fun processPdf(uri: Uri): Pair<Bitmap, BarcodeData>? {
         val extractor = PdfQrExtractor(this)
         val padding = preferences.getQrPadding()
         return extractor.extractQrCodeFromPdf(uri, padding)
     }
 
-    private suspend fun processImage(uri: Uri): Pair<Bitmap, TicketData?>? {
+    private suspend fun processImage(uri: Uri): Pair<Bitmap, BarcodeData>? {
         val bitmap = contentResolver.openInputStream(uri)?.use { inputStream ->
             BitmapFactory.decodeStream(inputStream)
         } ?: return null
@@ -130,7 +130,7 @@ class AddTicketActivity : AppCompatActivity() {
         return extractQrFromBitmap(bitmap, padding)
     }
 
-    private suspend fun extractQrFromBitmap(bitmap: Bitmap, padding: Int): Pair<Bitmap, TicketData?>? = suspendCoroutine { continuation ->
+    private suspend fun extractQrFromBitmap(bitmap: Bitmap, padding: Int): Pair<Bitmap, BarcodeData>? = suspendCoroutine { continuation ->
         val options = com.google.mlkit.vision.barcode.BarcodeScannerOptions.Builder()
             .setBarcodeFormats(
                 com.google.mlkit.vision.barcode.common.Barcode.FORMAT_QR_CODE,
@@ -148,12 +148,25 @@ class AddTicketActivity : AppCompatActivity() {
                 if (barcodes.isNotEmpty()) {
                     val barcode = barcodes[0]
                     val boundingBox = barcode.boundingBox
+                    val rawValue = barcode.rawValue
+
+                    if (rawValue == null) {
+                        continuation.resume(null)
+                        return@addOnSuccessListener
+                    }
 
                     // Attempt to decode if it's an Aztec code
                     var ticketData: TicketData? = null
-                    if (barcode.format == com.google.mlkit.vision.barcode.common.Barcode.FORMAT_AZTEC && barcode.rawValue != null) {
-                        ticketData = decodeTicketData(barcode.rawValue!!)
+                    if (barcode.format == com.google.mlkit.vision.barcode.common.Barcode.FORMAT_AZTEC) {
+                        ticketData = decodeTicketData(rawValue, barcode.format)
                     }
+
+                    // Create BarcodeData object
+                    val barcodeData = BarcodeData(
+                        rawData = rawValue,
+                        barcodeFormat = barcode.format,
+                        ticketData = ticketData
+                    )
 
                     if (boundingBox != null) {
                         val left = maxOf(0, boundingBox.left - padding)
@@ -162,7 +175,7 @@ class AddTicketActivity : AppCompatActivity() {
                         val height = minOf(bitmap.height - top, boundingBox.height() + padding * 2)
 
                         val croppedBitmap = Bitmap.createBitmap(bitmap, left, top, width, height)
-                        continuation.resume(Pair(croppedBitmap, ticketData))
+                        continuation.resume(Pair(croppedBitmap, barcodeData))
                     } else {
                         continuation.resume(null)
                     }
@@ -176,7 +189,7 @@ class AddTicketActivity : AppCompatActivity() {
             }
     }
 
-    private fun decodeTicketData(rawValue: String): TicketData? {
+    private fun decodeTicketData(rawValue: String, barcodeFormat: Int): TicketData? {
         return try {
             val ticket = com.robberwick.rsp6.Rsp6Decoder.decode(rawValue)
 
@@ -197,7 +210,8 @@ class AddTicketActivity : AppCompatActivity() {
                 railcardType = if (ticket.discountCode > 0) "Code ${ticket.discountCode}" else null,
                 ticketClass = if (ticket.standardClass) "Standard" else "First",
                 ticketReference = ticket.ticketReference,
-                rawData = rawValue
+                rawData = rawValue,
+                barcodeFormat = barcodeFormat
             )
         } catch (e: Exception) {
             null
@@ -352,38 +366,9 @@ class AddTicketActivity : AppCompatActivity() {
     }
 
     private fun addTicketReferenceToImage(qrBitmap: Bitmap, ticketReference: String?): Bitmap {
-        val showReference = preferences.getShowTicketReference()
-        if (!showReference || ticketReference.isNullOrEmpty()) {
-            return qrBitmap
-        }
-
-        val textSizePx = (qrBitmap.width / 15f).coerceAtLeast(12f)
-
-        val paint = android.graphics.Paint().apply {
-            color = Color.BLACK
-            textSize = textSizePx
-            typeface = android.graphics.Typeface.MONOSPACE
-            isAntiAlias = false
-            textAlign = android.graphics.Paint.Align.CENTER
-        }
-
-        val textBounds = android.graphics.Rect()
-        paint.getTextBounds(ticketReference, 0, ticketReference.length, textBounds)
-        val textHeight = textBounds.height()
-
-        val spacing = (qrBitmap.width / 20f).toInt().coerceAtLeast(5)
-
-        val totalHeight = qrBitmap.height + spacing + textHeight + spacing
-        val result = Bitmap.createBitmap(qrBitmap.width, totalHeight, Bitmap.Config.ARGB_8888)
-
-        val canvas = android.graphics.Canvas(result)
-        canvas.drawColor(Color.WHITE)
-        canvas.drawBitmap(qrBitmap, 0f, 0f, null)
-
-        val textX = qrBitmap.width / 2f
-        val textY = qrBitmap.height + spacing + textHeight.toFloat()
-        canvas.drawText(ticketReference, textX, textY, paint)
-
-        return result
+        // Reference text is now added during regeneration in NfcFlasher/MainActivity,
+        // not during initial save. This keeps the stored image simple and allows
+        // the reference to be toggled on/off without re-importing the ticket.
+        return qrBitmap
     }
 }

@@ -114,14 +114,23 @@ class NfcFlasher : AppCompatActivity() {
          */
         val ticketId = intent.getLongExtra("TICKET_ID", -1L)
 
+        android.util.Log.d("NfcFlasher", "onCreate - ticketId: $ticketId")
+
         if (ticketId != -1L) {
             // Load ticket from database
+            android.util.Log.d("NfcFlasher", "Loading ticket from database, ID: $ticketId")
             lifecycleScope.launch {
                 mTicketEntity = withContext(Dispatchers.IO) {
                     ticketRepository.getById(ticketId)
                 }
 
+                android.util.Log.d("NfcFlasher", "Ticket loaded: $mTicketEntity")
+
                 if (mTicketEntity != null) {
+                    val ticketData = mTicketEntity!!.getTicketData()
+                    android.util.Log.d("NfcFlasher", "TicketData from entity: $ticketData")
+                    android.util.Log.d("NfcFlasher", "TicketData has rawData: ${ticketData?.rawData?.isNotEmpty()}")
+
                     loadTicketImage(mTicketEntity!!)
                     displayTicketDetails(mTicketEntity!!)
                 } else {
@@ -130,33 +139,54 @@ class NfcFlasher : AppCompatActivity() {
                 }
             }
         } else {
-            // Fallback to legacy image (for backwards compatibility)
-            val savedUriStr = savedInstanceState?.getString("serializedGeneratedImgUri")
-            if (savedUriStr != null) {
-                mImgFileUri = Uri.parse(savedUriStr)
-            } else {
-                val intentExtras = intent.extras
-                mImgFilePath = intentExtras?.getString(IntentKeys.GeneratedImgPath)
-                if (mImgFilePath != null) {
-                    val fileRef = getFileStreamPath(mImgFilePath)
-                    mImgFileUri = Uri.fromFile(fileRef)
+            // Load barcode data from preferences and generate bitmap
+            val preferences = Preferences(this)
+            val barcodeData = preferences.getBarcodeData()
+
+            if (barcodeData != null) {
+                // Generate bitmap from barcode data
+                try {
+                    val (screenWidth, screenHeight) = preferences.getScreenSizePixels()
+                    val showReference = preferences.getShowTicketReference()
+                    val ticketReference = if (showReference) barcodeData.ticketData?.ticketReference else null
+
+                    android.util.Log.d("NfcFlasher", "onCreate - showReference: $showReference")
+                    android.util.Log.d("NfcFlasher", "onCreate - ticketData: ${barcodeData.ticketData}")
+                    android.util.Log.d("NfcFlasher", "onCreate - ticketReference: $ticketReference")
+
+                    this.mBitmap = BarcodeGenerator.generateBarcodeWithReference(
+                        rawData = barcodeData.rawData,
+                        format = when (barcodeData.barcodeFormat) {
+                            com.google.mlkit.vision.barcode.common.Barcode.FORMAT_AZTEC -> com.google.zxing.BarcodeFormat.AZTEC
+                            com.google.mlkit.vision.barcode.common.Barcode.FORMAT_QR_CODE -> com.google.zxing.BarcodeFormat.QR_CODE
+                            com.google.mlkit.vision.barcode.common.Barcode.FORMAT_DATA_MATRIX -> com.google.zxing.BarcodeFormat.DATA_MATRIX
+                            com.google.mlkit.vision.barcode.common.Barcode.FORMAT_PDF417 -> com.google.zxing.BarcodeFormat.PDF_417
+                            else -> com.google.zxing.BarcodeFormat.QR_CODE
+                        },
+                        width = screenWidth,
+                        height = screenHeight,
+                        edgePadding = preferences.getQrPadding(),
+                        ticketReference = ticketReference
+                    )
+
+                    // Display preview
+                    val imagePreviewElem: ImageView = findViewById(R.id.previewImageView)
+                    imagePreviewElem.setImageBitmap(this.mBitmap)
+
+                    android.util.Log.d("NfcFlasher", "Generated bitmap from barcode data: ${screenWidth}x${screenHeight}")
+                } catch (e: Exception) {
+                    android.util.Log.e("NfcFlasher", "Failed to generate barcode", e)
+                    Toast.makeText(this, "Failed to generate barcode: ${e.message}", Toast.LENGTH_LONG).show()
                 }
-            }
-            if (mImgFileUri == null) {
-                val fileRef = getFileStreamPath(GeneratedImageFilename)
-                mImgFileUri = Uri.fromFile(fileRef)
-            }
 
-            val imagePreviewElem: ImageView = findViewById(R.id.previewImageView)
-            imagePreviewElem.setImageURI(mImgFileUri)
-
-            if (mImgFileUri != null) {
-                val bmOptions = BitmapFactory.Options()
-                this.mBitmap = BitmapFactory.decodeFile(mImgFileUri!!.path, bmOptions)
+                // Display ticket details if available
+                if (barcodeData.ticketData != null) {
+                    displayBarcodeTicketDetails(barcodeData.ticketData)
+                }
+            } else {
+                Toast.makeText(this, "No barcode data found", Toast.LENGTH_LONG).show()
+                finish()
             }
-
-            // Load legacy ticket data from preferences
-            displayLegacyTicketDetails()
         }
 
         /**
@@ -228,24 +258,45 @@ class NfcFlasher : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        
-        // Reload the image preview in case it was updated while we were in background
-        val fileRef = getFileStreamPath(GeneratedImageFilename)
-        if (fileRef.exists()) {
-            val newImgFileUri = Uri.fromFile(fileRef)
-            val imagePreviewElem: ImageView = findViewById(R.id.previewImageView)
-            // Set to null first to clear cache, then set the URI
-            imagePreviewElem.setImageURI(null)
-            imagePreviewElem.setImageURI(newImgFileUri)
-            
-            // Also reload the bitmap for flashing
-            val bmOptions = BitmapFactory.Options()
-            this.mBitmap = BitmapFactory.decodeFile(newImgFileUri.path, bmOptions)
-        }
-        
-        // Load and display ticket details if available
+
+        // Regenerate bitmap from barcode data in case settings changed
         val preferences = Preferences(this)
-        val ticketData = preferences.getTicketData()
+        val barcodeData = preferences.getBarcodeData()
+
+        if (barcodeData != null && mTicketEntity == null) {
+            // Only regenerate if not using database ticket (mTicketEntity == null means legacy mode)
+            try {
+                val (screenWidth, screenHeight) = preferences.getScreenSizePixels()
+                val showReference = preferences.getShowTicketReference()
+                val ticketReference = if (showReference) barcodeData.ticketData?.ticketReference else null
+
+                this.mBitmap = BarcodeGenerator.generateBarcodeWithReference(
+                    rawData = barcodeData.rawData,
+                    format = when (barcodeData.barcodeFormat) {
+                        com.google.mlkit.vision.barcode.common.Barcode.FORMAT_AZTEC -> com.google.zxing.BarcodeFormat.AZTEC
+                        com.google.mlkit.vision.barcode.common.Barcode.FORMAT_QR_CODE -> com.google.zxing.BarcodeFormat.QR_CODE
+                        com.google.mlkit.vision.barcode.common.Barcode.FORMAT_DATA_MATRIX -> com.google.zxing.BarcodeFormat.DATA_MATRIX
+                        com.google.mlkit.vision.barcode.common.Barcode.FORMAT_PDF417 -> com.google.zxing.BarcodeFormat.PDF_417
+                        else -> com.google.zxing.BarcodeFormat.QR_CODE
+                    },
+                    width = screenWidth,
+                    height = screenHeight,
+                    edgePadding = preferences.getQrPadding(),
+                    ticketReference = ticketReference
+                )
+
+                // Update preview
+                val imagePreviewElem: ImageView = findViewById(R.id.previewImageView)
+                imagePreviewElem.setImageBitmap(this.mBitmap)
+
+                android.util.Log.d("NfcFlasher", "Regenerated bitmap from barcode data: ${screenWidth}x${screenHeight}")
+            } catch (e: Exception) {
+                android.util.Log.e("NfcFlasher", "Failed to regenerate barcode", e)
+            }
+        }
+
+        // Load and display ticket details if available
+        val ticketData = barcodeData?.ticketData
         val ticketDetailsCard = findViewById<com.google.android.material.card.MaterialCardView>(R.id.flasherTicketDetailsCard)
         val ticketJourneySummary = findViewById<android.widget.TextView>(R.id.flasherTicketJourneySummary)
         val ticketDateTime = findViewById<android.widget.TextView>(R.id.flasherTicketDateTime)
@@ -621,8 +672,49 @@ class NfcFlasher : AppCompatActivity() {
     }
 
     private fun loadTicketImage(ticket: TicketEntity) {
+        // Try to regenerate from TicketData if available
+        val ticketData = ticket.getTicketData()
+        if (ticketData != null && ticketData.rawData.isNotEmpty()) {
+            try {
+                val preferences = Preferences(this)
+                val (screenWidth, screenHeight) = preferences.getScreenSizePixels()
+                val showReference = preferences.getShowTicketReference()
+                val ticketReference = if (showReference) ticketData.ticketReference else null
+
+                android.util.Log.d("NfcFlasher", "loadTicketImage - Regenerating from TicketData")
+                android.util.Log.d("NfcFlasher", "loadTicketImage - showReference: $showReference")
+                android.util.Log.d("NfcFlasher", "loadTicketImage - ticketReference: $ticketReference")
+
+                this.mBitmap = BarcodeGenerator.generateBarcodeWithReference(
+                    rawData = ticketData.rawData,
+                    format = when (ticketData.barcodeFormat) {
+                        com.google.mlkit.vision.barcode.common.Barcode.FORMAT_AZTEC -> com.google.zxing.BarcodeFormat.AZTEC
+                        com.google.mlkit.vision.barcode.common.Barcode.FORMAT_QR_CODE -> com.google.zxing.BarcodeFormat.QR_CODE
+                        com.google.mlkit.vision.barcode.common.Barcode.FORMAT_DATA_MATRIX -> com.google.zxing.BarcodeFormat.DATA_MATRIX
+                        com.google.mlkit.vision.barcode.common.Barcode.FORMAT_PDF417 -> com.google.zxing.BarcodeFormat.PDF_417
+                        else -> com.google.zxing.BarcodeFormat.QR_CODE
+                    },
+                    width = screenWidth,
+                    height = screenHeight,
+                    edgePadding = preferences.getQrPadding(),
+                    ticketReference = ticketReference
+                )
+
+                // Display preview
+                val imagePreviewElem: ImageView = findViewById(R.id.previewImageView)
+                imagePreviewElem.setImageBitmap(this.mBitmap)
+
+                android.util.Log.d("NfcFlasher", "Successfully regenerated bitmap from ticket data")
+                return
+            } catch (e: Exception) {
+                android.util.Log.e("NfcFlasher", "Failed to regenerate from TicketData, falling back to file", e)
+            }
+        }
+
+        // Fallback: load from file
         val imageFile = File(ticket.qrCodeImagePath)
         if (imageFile.exists()) {
+            android.util.Log.d("NfcFlasher", "loadTicketImage - Loading from file: ${ticket.qrCodeImagePath}")
             mImgFileUri = Uri.fromFile(imageFile)
             val imagePreviewElem: ImageView = findViewById(R.id.previewImageView)
             imagePreviewElem.setImageURI(mImgFileUri)
@@ -716,6 +808,53 @@ class NfcFlasher : AppCompatActivity() {
             } else {
                 reference.visibility = android.view.View.GONE
             }
+        }
+    }
+
+    private fun displayBarcodeTicketDetails(ticketData: TicketData) {
+        val ticketDetailsCard: MaterialCardView = findViewById(R.id.flasherTicketDetailsCard)
+        val journeySummary: TextView = findViewById(R.id.flasherTicketJourneySummary)
+        val dateTime: TextView = findViewById(R.id.flasherTicketDateTime)
+        val ticketType: TextView = findViewById(R.id.flasherTicketType)
+        val reference: TextView = findViewById(R.id.flasherTicketReference)
+
+        ticketDetailsCard.visibility = android.view.View.VISIBLE
+
+        val origin = ticketData.originStation ?: "Unknown"
+        val dest = ticketData.destinationStation ?: "Unknown"
+        journeySummary.text = "$origin → $dest"
+
+        val date = ticketData.travelDate ?: ""
+        val time = ticketData.travelTime ?: ""
+        val shouldShowTime = time.isNotEmpty() && time != "00:00"
+
+        if (date.isNotEmpty()) {
+            dateTime.text = if (shouldShowTime) "$date $time" else date
+            dateTime.visibility = android.view.View.VISIBLE
+        } else {
+            dateTime.visibility = android.view.View.GONE
+        }
+
+        val typeText = buildString {
+            ticketData.ticketType?.let { append(it) }
+            if (ticketData.ticketClass != null && ticketData.ticketType != null) {
+                append(" • ")
+            }
+            ticketData.ticketClass?.let { append(it) }
+        }
+
+        if (typeText.isNotEmpty()) {
+            ticketType.text = typeText
+            ticketType.visibility = android.view.View.VISIBLE
+        } else {
+            ticketType.visibility = android.view.View.GONE
+        }
+
+        if (ticketData.ticketReference != null) {
+            reference.text = "Ref: ${ticketData.ticketReference}"
+            reference.visibility = android.view.View.VISIBLE
+        } else {
+            reference.visibility = android.view.View.GONE
         }
     }
 }

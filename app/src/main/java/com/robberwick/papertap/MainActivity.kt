@@ -261,7 +261,8 @@ class MainActivity : AppCompatActivity() {
                 }
                 
                 if (result != null) {
-                    val (qrBitmap, ticketData) = result
+                    val (qrBitmap, barcodeData) = result
+                    val ticketData = barcodeData.ticketData
 
                     // QR code found, now crop/resize it
                     val message = if (ticketData != null) {
@@ -276,16 +277,12 @@ class MainActivity : AppCompatActivity() {
                         Toast.LENGTH_SHORT
                     ).show()
 
-                    // Store ticket data if available
-                    if (ticketData != null) {
-                        mPreferencesController!!.saveTicketData(ticketData)
-                    }
+                    // Store barcode data (includes ticket data if available)
+                    mPreferencesController!!.saveBarcodeData(barcodeData)
 
-                    val (sw, sh) = mPreferencesController!!.getScreenSizePixels()
-                    val withReference = addTicketReferenceToImage(qrBitmap, ticketData?.ticketReference)
-                    val processedBitmap = convertToBlackAndWhite(withReference)
-                    val scaledBitmap = Bitmap.createScaledBitmap(processedBitmap, sw, sh, false)
-                    flashBitmap(scaledBitmap)
+                    // Navigate to NFC flasher (barcode will be regenerated there)
+                    val navIntent = Intent(this@MainActivity, NfcFlasher::class.java)
+                    startActivity(navIntent)
                 } else {
                     // QR not found - let user manually select area
                     Toast.makeText(
@@ -444,8 +441,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkReFlashAbility() {
-        val lastGeneratedFile = getFileStreamPath(GeneratedImageFilename)
-        
+        val barcodeData = mPreferencesController!!.getBarcodeData()
+
         val welcomeCard = findViewById<MaterialCardView>(R.id.welcomeCard)
         val reflashButton = findViewById<Button>(R.id.reflashButton)
         val reflashPreviewCard = findViewById<MaterialCardView>(R.id.reflashPreviewCard)
@@ -456,19 +453,39 @@ class MainActivity : AppCompatActivity() {
         val ticketType = findViewById<TextView>(R.id.ticketType)
         val ticketReference = findViewById<TextView>(R.id.ticketReference)
 
-        if (lastGeneratedFile.exists()) {
+        if (barcodeData != null) {
             // Hide welcome, show reflash UI
             mHasReFlashableImage = true
             welcomeCard.visibility = android.view.View.GONE
             reflashButton.visibility = android.view.View.VISIBLE
             reflashPreviewCard.visibility = android.view.View.VISIBLE
 
-            // Need to set null first, or else Android will cache previous image
-            reflashImagePreview.setImageURI(null)
-            reflashImagePreview.setImageURI(Uri.fromFile(lastGeneratedFile))
+            // Generate preview bitmap from barcode data
+            try {
+                val showReference = mPreferencesController!!.getShowTicketReference()
+                val ticketReference = if (showReference) barcodeData.ticketData?.ticketReference else null
+
+                val previewBitmap = BarcodeGenerator.generateBarcodeWithReference(
+                    rawData = barcodeData.rawData,
+                    format = when (barcodeData.barcodeFormat) {
+                        com.google.mlkit.vision.barcode.common.Barcode.FORMAT_AZTEC -> com.google.zxing.BarcodeFormat.AZTEC
+                        com.google.mlkit.vision.barcode.common.Barcode.FORMAT_QR_CODE -> com.google.zxing.BarcodeFormat.QR_CODE
+                        com.google.mlkit.vision.barcode.common.Barcode.FORMAT_DATA_MATRIX -> com.google.zxing.BarcodeFormat.DATA_MATRIX
+                        com.google.mlkit.vision.barcode.common.Barcode.FORMAT_PDF417 -> com.google.zxing.BarcodeFormat.PDF_417
+                        else -> com.google.zxing.BarcodeFormat.QR_CODE
+                    },
+                    width = 200,
+                    height = 200,
+                    edgePadding = mPreferencesController!!.getQrPadding(),
+                    ticketReference = ticketReference
+                )
+                reflashImagePreview.setImageBitmap(previewBitmap)
+            } catch (e: Exception) {
+                android.util.Log.e("MainActivity", "Failed to generate preview barcode", e)
+            }
 
             // Show ticket details if available
-            val ticketData = mPreferencesController!!.getTicketData()
+            val ticketData = barcodeData.ticketData
             if (ticketData != null) {
                 ticketDetailsCard.visibility = android.view.View.VISIBLE
 
@@ -619,7 +636,8 @@ class MainActivity : AppCompatActivity() {
                 }
                 
                 if (result != null) {
-                    val (qrBitmap, ticketData) = result
+                    val (qrBitmap, barcodeData) = result
+                    val ticketData = barcodeData.ticketData
 
                     // QR code found, process and flash it
                     val message = if (ticketData != null) {
@@ -634,16 +652,12 @@ class MainActivity : AppCompatActivity() {
                         Toast.LENGTH_SHORT
                     ).show()
 
-                    // Store ticket data if available
-                    if (ticketData != null) {
-                        mPreferencesController!!.saveTicketData(ticketData)
-                    }
+                    // Store barcode data (includes ticket data if available)
+                    mPreferencesController!!.saveBarcodeData(barcodeData)
 
-                    val (sw, sh) = mPreferencesController!!.getScreenSizePixels()
-                    val withReference = addTicketReferenceToImage(qrBitmap, ticketData?.ticketReference)
-                    val processedBitmap = convertToBlackAndWhite(withReference)
-                    val scaledBitmap = Bitmap.createScaledBitmap(processedBitmap, sw, sh, false)
-                    flashBitmap(scaledBitmap)
+                    // Navigate to NFC flasher (barcode will be regenerated there)
+                    val navIntent = Intent(this@MainActivity, NfcFlasher::class.java)
+                    startActivity(navIntent)
                 } else {
                     // QR not found
                     Toast.makeText(
@@ -665,8 +679,9 @@ class MainActivity : AppCompatActivity() {
     
     /**
      * Extract QR code from bitmap using ML Kit barcode scanning
+     * Returns: Pair of (cropped bitmap, barcode data with optional ticket info)
      */
-    private suspend fun extractQrFromBitmap(bitmap: Bitmap, padding: Int): Pair<Bitmap, TicketData?>? = suspendCoroutine { continuation ->
+    private suspend fun extractQrFromBitmap(bitmap: Bitmap, padding: Int): Pair<Bitmap, BarcodeData>? = suspendCoroutine { continuation ->
         val options = com.google.mlkit.vision.barcode.BarcodeScannerOptions.Builder()
             .setBarcodeFormats(
                 com.google.mlkit.vision.barcode.common.Barcode.FORMAT_QR_CODE,
@@ -675,28 +690,42 @@ class MainActivity : AppCompatActivity() {
                 com.google.mlkit.vision.barcode.common.Barcode.FORMAT_PDF417
             )
             .build()
-        
+
         val scanner = com.google.mlkit.vision.barcode.BarcodeScanning.getClient(options)
         val image = com.google.mlkit.vision.common.InputImage.fromBitmap(bitmap, 0)
-        
+
         android.util.Log.d("MainActivity", "Starting barcode scan on bitmap ${bitmap.width}x${bitmap.height}")
-        
+
         scanner.process(image)
             .addOnSuccessListener { barcodes ->
                 android.util.Log.d("MainActivity", "Scan complete. Found ${barcodes.size} barcodes")
-                
+
                 if (barcodes.isNotEmpty()) {
                     val barcode = barcodes[0]
                     val boundingBox = barcode.boundingBox
-                    
-                    android.util.Log.d("MainActivity", "Barcode format: ${barcode.format}, value: ${barcode.rawValue?.take(50)}")
-                    
+                    val rawValue = barcode.rawValue
+
+                    android.util.Log.d("MainActivity", "Barcode format: ${barcode.format}, value: ${rawValue?.take(50)}")
+
+                    if (rawValue == null) {
+                        android.util.Log.w("MainActivity", "Barcode found but no raw value")
+                        continuation.resume(null)
+                        return@addOnSuccessListener
+                    }
+
                     // Attempt to decode if it's an Aztec code
                     var ticketData: TicketData? = null
-                    if (barcode.format == com.google.mlkit.vision.barcode.common.Barcode.FORMAT_AZTEC && barcode.rawValue != null) {
-                        ticketData = decodeTicketData(barcode.rawValue!!)
+                    if (barcode.format == com.google.mlkit.vision.barcode.common.Barcode.FORMAT_AZTEC) {
+                        ticketData = decodeTicketData(rawValue, barcode.format)
                     }
-                    
+
+                    // Create BarcodeData object
+                    val barcodeData = BarcodeData(
+                        rawData = rawValue,
+                        barcodeFormat = barcode.format,
+                        ticketData = ticketData
+                    )
+
                     if (boundingBox != null) {
                         android.util.Log.d("MainActivity", "Bounding box: $boundingBox")
                         android.util.Log.d("MainActivity", "Using padding: $padding pixels")
@@ -704,10 +733,10 @@ class MainActivity : AppCompatActivity() {
                         val top = maxOf(0, boundingBox.top - padding)
                         val width = minOf(bitmap.width - left, boundingBox.width() + padding * 2)
                         val height = minOf(bitmap.height - top, boundingBox.height() + padding * 2)
-                        
+
                         val croppedBitmap = Bitmap.createBitmap(bitmap, left, top, width, height)
                         android.util.Log.d("MainActivity", "Cropped bitmap: ${croppedBitmap.width}x${croppedBitmap.height}")
-                        continuation.resume(Pair(croppedBitmap, ticketData))
+                        continuation.resume(Pair(croppedBitmap, barcodeData))
                     } else {
                         android.util.Log.w("MainActivity", "Barcode found but no bounding box")
                         continuation.resume(null)
@@ -724,7 +753,7 @@ class MainActivity : AppCompatActivity() {
             }
     }
     
-    private fun decodeTicketData(rawValue: String): TicketData? {
+    private fun decodeTicketData(rawValue: String, barcodeFormat: Int): TicketData? {
         return try {
             android.util.Log.d("MainActivity", "Attempting to decode Aztec ticket data")
             val ticket = com.robberwick.rsp6.Rsp6Decoder.decode(rawValue)
@@ -749,7 +778,8 @@ class MainActivity : AppCompatActivity() {
                 railcardType = if (ticket.discountCode > 0) "Code ${ticket.discountCode}" else null,
                 ticketClass = if (ticket.standardClass) "Standard" else "First",
                 ticketReference = ticket.ticketReference,
-                rawData = rawValue
+                rawData = rawValue,
+                barcodeFormat = barcodeFormat
             )
         } catch (e: com.robberwick.rsp6.Rsp6DecoderException) {
             android.util.Log.e("MainActivity", "Failed to decode RSP6 ticket", e)

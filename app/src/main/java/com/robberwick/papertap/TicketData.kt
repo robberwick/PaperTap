@@ -11,7 +11,8 @@ data class TicketData(
     val railcardType: String?,
     val ticketClass: String?,
     val ticketReference: String?,
-    val rawData: String
+    val rawData: String,
+    val barcodeFormat: Int = 0 // Barcode format type (AZTEC=4096, QR_CODE=256, etc.)
 ) {
     fun toJson(): String {
         val json = JSONObject()
@@ -24,6 +25,7 @@ data class TicketData(
         json.put("ticketClass", ticketClass)
         json.put("ticketReference", ticketReference)
         json.put("rawData", rawData)
+        json.put("barcodeFormat", barcodeFormat)
         return json.toString()
     }
     
@@ -58,7 +60,8 @@ data class TicketData(
                     railcardType = json.optString("railcardType").takeIf { it.isNotEmpty() },
                     ticketClass = json.optString("ticketClass").takeIf { it.isNotEmpty() },
                     ticketReference = json.optString("ticketReference").takeIf { it.isNotEmpty() },
-                    rawData = json.getString("rawData")
+                    rawData = json.getString("rawData"),
+                    barcodeFormat = json.optInt("barcodeFormat", 0)
                 )
             } catch (e: Exception) {
                 null

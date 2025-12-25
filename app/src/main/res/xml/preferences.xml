@@ -4,29 +4,13 @@
 
     <!-- Display Settings -->
     <PreferenceCategory
-        android:title="Display"
-        android:iconSpaceReserved="false">
-
-        <ListPreference
-            android:key="Display_Size"
-            android:title="Display Size"
-            android:summary="%s"
-            android:entries="@array/screen_sizes"
-            android:entryValues="@array/screen_sizes"
-            android:defaultValue="1.54&quot; v.B"
-            android:iconSpaceReserved="false" />
-
-    </PreferenceCategory>
-
-    <!-- QR Code Settings -->
-    <PreferenceCategory
-        android:title="QR Code Settings"
+        android:title="Display Settings"
         android:iconSpaceReserved="false">
 
         <SeekBarPreference
             android:key="Qr_Padding"
-            android:title="QR Code Padding"
-            android:summary="Extra space around detected QR codes"
+            android:title="Edge Padding"
+            android:summary="White border around image to compensate for display edge variations (pixels)"
             android:defaultValue="5"
             android:max="50"
             app:showSeekBarValue="true"

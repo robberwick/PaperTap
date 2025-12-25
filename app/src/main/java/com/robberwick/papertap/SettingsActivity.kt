@@ -32,8 +32,14 @@ class SettingsActivity : AppCompatActivity() {
 
     class SettingsFragment : PreferenceFragmentCompat() {
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
+            // CRITICAL: Set the preference manager to use the same SharedPreferences file
+            // that the rest of the app uses (defined in Constants.kt)
+            preferenceManager.sharedPreferencesName = Constants.Preference_File_Key
+
             // Load preferences from XML
             setPreferencesFromResource(R.xml.preferences, rootKey)
+
+            android.util.Log.d("SettingsFragment", "Preferences configured to use file: ${Constants.Preference_File_Key}")
         }
     }
 }

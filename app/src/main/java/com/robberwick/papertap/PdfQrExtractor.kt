@@ -17,7 +17,7 @@ class PdfQrExtractor(private val context: Context) {
     
     private val TAG = "PdfQrExtractor"
 
-    suspend fun extractQrCodeFromPdf(pdfUri: Uri, padding: Int = 5): Pair<Bitmap, TicketData?>? {
+    suspend fun extractQrCodeFromPdf(pdfUri: Uri, padding: Int = 5): Pair<Bitmap, BarcodeData>? {
         var fileDescriptor: ParcelFileDescriptor? = null
         var pdfRenderer: PdfRenderer? = null
         
@@ -67,7 +67,7 @@ class PdfQrExtractor(private val context: Context) {
         }
     }
     
-    private suspend fun extractQrFromBitmap(bitmap: Bitmap, padding: Int): Pair<Bitmap, TicketData?>? = suspendCoroutine { continuation ->
+    private suspend fun extractQrFromBitmap(bitmap: Bitmap, padding: Int): Pair<Bitmap, BarcodeData>? = suspendCoroutine { continuation ->
         val options = BarcodeScannerOptions.Builder()
             .setBarcodeFormats(
                 Barcode.FORMAT_QR_CODE,
@@ -76,28 +76,42 @@ class PdfQrExtractor(private val context: Context) {
                 Barcode.FORMAT_PDF417
             )
             .build()
-        
+
         val scanner = BarcodeScanning.getClient(options)
         val image = InputImage.fromBitmap(bitmap, 0)
-        
+
         Log.d(TAG, "Starting barcode scan on bitmap ${bitmap.width}x${bitmap.height}")
-        
+
         scanner.process(image)
             .addOnSuccessListener { barcodes ->
                 Log.d(TAG, "Scan complete. Found ${barcodes.size} barcodes")
-                
+
                 if (barcodes.isNotEmpty()) {
                     val barcode = barcodes[0]
                     val boundingBox = barcode.boundingBox
-                    
-                    Log.d(TAG, "Barcode format: ${barcode.format}, value: ${barcode.rawValue?.take(50)}")
-                    
+                    val rawValue = barcode.rawValue
+
+                    Log.d(TAG, "Barcode format: ${barcode.format}, value: ${rawValue?.take(50)}")
+
+                    if (rawValue == null) {
+                        Log.w(TAG, "Barcode found but no raw value")
+                        continuation.resume(null)
+                        return@addOnSuccessListener
+                    }
+
                     // Attempt to decode if it's an Aztec code
                     var ticketData: TicketData? = null
-                    if (barcode.format == Barcode.FORMAT_AZTEC && barcode.rawValue != null) {
-                        ticketData = decodeTicketData(barcode.rawValue!!)
+                    if (barcode.format == Barcode.FORMAT_AZTEC) {
+                        ticketData = decodeTicketData(rawValue, barcode.format)
                     }
-                    
+
+                    // Create BarcodeData object
+                    val barcodeData = BarcodeData(
+                        rawData = rawValue,
+                        barcodeFormat = barcode.format,
+                        ticketData = ticketData
+                    )
+
                     if (boundingBox != null) {
                         Log.d(TAG, "Bounding box: $boundingBox")
                         // Use padding from settings
@@ -106,10 +120,10 @@ class PdfQrExtractor(private val context: Context) {
                         val top = maxOf(0, boundingBox.top - padding)
                         val width = minOf(bitmap.width - left, boundingBox.width() + padding * 2)
                         val height = minOf(bitmap.height - top, boundingBox.height() + padding * 2)
-                        
+
                         val croppedBitmap = Bitmap.createBitmap(bitmap, left, top, width, height)
                         Log.d(TAG, "Cropped bitmap: ${croppedBitmap.width}x${croppedBitmap.height}")
-                        continuation.resume(Pair(croppedBitmap, ticketData))
+                        continuation.resume(Pair(croppedBitmap, barcodeData))
                     } else {
                         Log.w(TAG, "Barcode found but no bounding box")
                         continuation.resume(null)
@@ -126,22 +140,22 @@ class PdfQrExtractor(private val context: Context) {
             }
     }
     
-    private fun decodeTicketData(rawValue: String): TicketData? {
+    private fun decodeTicketData(rawValue: String, barcodeFormat: Int): TicketData? {
         return try {
             Log.d(TAG, "Attempting to decode Aztec ticket data")
             val ticket = com.robberwick.rsp6.Rsp6Decoder.decode(rawValue)
-            
+
             // Initialize lookups if not already done
             StationLookup.init(context)
             FareCodeLookup.init(context)
-            
+
             // Convert NLC codes to station names
             val originStation = StationLookup.getStationName(ticket.originNlc)
             val destinationStation = StationLookup.getStationName(ticket.destinationNlc)
-            
+
             // Convert fare code to human-readable name
             val fareName = FareCodeLookup.getFareName(ticket.fare)
-            
+
             TicketData(
                 originStation = originStation,
                 destinationStation = destinationStation,
@@ -151,7 +165,8 @@ class PdfQrExtractor(private val context: Context) {
                 railcardType = if (ticket.discountCode > 0) "Code ${ticket.discountCode}" else null,
                 ticketClass = if (ticket.standardClass) "Standard" else "First",
                 ticketReference = ticket.ticketReference,
-                rawData = rawValue
+                rawData = rawValue,
+                barcodeFormat = barcodeFormat
             )
         } catch (e: com.robberwick.rsp6.Rsp6DecoderException) {
             Log.e(TAG, "Failed to decode RSP6 ticket", e)
