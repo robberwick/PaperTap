@@ -18,180 +18,176 @@
             android:layout_height="?attr/actionBarSize"
             android:background="?attr/colorPrimary"
             android:elevation="4dp"
-            app:title="Flash Image"
+            app:title="Write ticket"
             app:titleTextColor="?attr/colorOnPrimary"
             app:navigationIcon="?attr/homeAsUpIndicator"
             android:theme="@style/ToolbarTheme"
             app:popupTheme="@style/PopupMenuTheme" />
     </com.google.android.material.appbar.AppBarLayout>
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="?attr/android:colorBackground"
+        android:fillViewport="true"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-    <TextView
-        android:id="@+id/pageTitle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/ready_to_flash_title"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:textColor="?attr/colorOnSurface"
-        android:layout_marginTop="24dp"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <TextView
-        android:id="@+id/instructionText"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:text="@string/hold_phone_to_flash_description"
-        android:textSize="16sp"
-        android:textAlignment="center"
-        android:textColor="?attr/colorOnSurface"
-        android:layout_marginTop="16dp"
-        android:layout_marginStart="48dp"
-        android:layout_marginEnd="48dp"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/pageTitle" />
-
-    <!-- Ticket details card - shown when ticket data is available -->
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/flasherTicketDetailsCard"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="24dp"
-        android:layout_marginEnd="24dp"
-        android:layout_marginTop="16dp"
-        android:visibility="gone"
-        app:cardBackgroundColor="?attr/colorPrimaryContainer"
-        app:cardCornerRadius="16dp"
-        app:cardElevation="2dp"
-        app:strokeWidth="0dp"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/instructionText">
-
-        <LinearLayout
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
+            android:background="?attr/android:colorBackground"
+            android:paddingTop="16dp"
+            android:paddingBottom="16dp">
 
-            <TextView
-                android:id="@+id/flasherTicketJourneySummary"
-                android:layout_width="match_parent"
+            <!-- Spacer for consistent top margin when card is hidden -->
+            <View
+                android:id="@+id/topSpacer"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <!-- Ticket details card - at the top -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/flasherTicketDetailsCard"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:textColor="?attr/colorOnPrimaryContainer"
-                android:text="London → Manchester" />
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="16dp"
+                android:visibility="visible"
+                app:cardBackgroundColor="?attr/colorPrimaryContainer"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:strokeWidth="0dp"
+                app:layout_constraintLeft_toLeftOf="parent"
+                app:layout_constraintRight_toRightOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
 
-            <TextView
-                android:id="@+id/flasherTicketDateTime"
-                android:layout_width="match_parent"
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:id="@+id/flasherTicketJourneySummary"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="?attr/colorOnPrimaryContainer"
+                        android:text="London → Manchester" />
+
+                    <TextView
+                        android:id="@+id/flasherTicketDateTime"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:textSize="14sp"
+                        android:textColor="?attr/colorOnPrimaryContainer"
+                        android:text="2024-01-15 14:30" />
+
+                    <TextView
+                        android:id="@+id/flasherTicketType"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:textSize="14sp"
+                        android:textColor="?attr/colorOnPrimaryContainer"
+                        android:text="Advance Single • Standard" />
+
+                    <TextView
+                        android:id="@+id/flasherTicketReference"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:textSize="12sp"
+                        android:fontFamily="monospace"
+                        android:textColor="?attr/colorOnPrimaryContainer"
+                        android:alpha="0.7"
+                        android:text="Ref: ABC123456789" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Image preview - 50% width, centered -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/previewImageWrapper"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_marginTop="24dp"
+                app:cardElevation="4dp"
+                app:cardCornerRadius="12dp"
+                app:strokeWidth="0dp"
+                app:cardBackgroundColor="?attr/colorSurfaceVariant"
+                app:layout_constraintWidth_percent="0.5"
+                app:layout_constraintDimensionRatio="1:1"
+                app:layout_constraintLeft_toLeftOf="parent"
+                app:layout_constraintRight_toRightOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/flasherTicketDetailsCard">
+
+                <ImageView
+                    android:id="@+id/previewImageView"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:contentDescription="@string/image_preview_content_description"
+                    android:padding="16dp"
+                    android:scaleType="fitCenter"
+                    app:srcCompat="@android:drawable/stat_sys_warning" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Action card - instructions/progress -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/actionCard"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:textSize="14sp"
-                android:textColor="?attr/colorOnPrimaryContainer"
-                android:text="2024-01-15 14:30" />
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="16dp"
+                android:layout_marginTop="24dp"
+                app:cardBackgroundColor="?attr/colorSecondaryContainer"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp"
+                app:strokeWidth="0dp"
+                app:layout_constraintLeft_toLeftOf="parent"
+                app:layout_constraintRight_toRightOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/previewImageWrapper">
 
-            <TextView
-                android:id="@+id/flasherTicketType"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:textSize="14sp"
-                android:textColor="?attr/colorOnPrimaryContainer"
-                android:text="Advance Single • Standard" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="16dp">
 
-            <TextView
-                android:id="@+id/flasherTicketReference"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:textSize="12sp"
-                android:fontFamily="monospace"
-                android:textColor="?attr/colorOnPrimaryContainer"
-                android:alpha="0.7"
-                android:text="Ref: ABC123456789" />
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
+                    <!-- Activity indicator - shown when writing -->
+                    <ProgressBar
+                        android:id="@+id/activityIndicator"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:indeterminate="true"
+                        android:visibility="gone"
+                        android:layout_marginEnd="12dp" />
 
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/previewImageWrapper"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_marginStart="24dp"
-        android:layout_marginEnd="24dp"
-        android:layout_marginTop="24dp"
-        android:layout_marginBottom="48dp"
-        app:cardElevation="4dp"
-        app:cardCornerRadius="20dp"
-        app:strokeWidth="0dp"
-        app:cardBackgroundColor="?attr/colorPrimaryContainer"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/flasherTicketDetailsCard"
-        app:layout_constraintBottom_toBottomOf="parent">
+                    <!-- NFC icon - shown when waiting -->
+                    <ImageView
+                        android:id="@+id/nfcIcon"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_marginEnd="12dp"
+                        android:src="@drawable/ic_nfc"
+                        android:tint="?attr/colorOnSecondaryContainer"
+                        android:contentDescription="NFC" />
 
-        <ImageView
-            android:id="@+id/previewImageView"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:contentDescription="@string/image_preview_content_description"
-            android:padding="24dp"
-            android:scaleType="fitCenter"
-            app:srcCompat="@android:drawable/stat_sys_warning" />
-    </com.google.android.material.card.MaterialCardView>
+                    <!-- Status text -->
+                    <TextView
+                        android:id="@+id/actionText"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Hold to back of display"
+                        android:textSize="16sp"
+                        android:textColor="?attr/colorOnSecondaryContainer" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
-    <!-- Progress Modal Overlay -->
-    <View
-        android:id="@+id/modalBackground"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:background="#CC000000"
-        android:visibility="gone"
-        android:elevation="16dp"
-        android:clickable="true"
-        android:focusable="true"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent" />
-
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/whileFlashingArea"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="32dp"
-        android:layout_marginEnd="32dp"
-        android:elevation="20dp"
-        android:visibility="gone"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent">
-        
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardBackgroundColor="@color/white"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="8dp"
-            app:strokeWidth="0dp"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintRight_toRightOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent">
-            <include layout="@layout/nfc_write_dialog" />
-        </com.google.android.material.card.MaterialCardView>
-    </androidx.constraintlayout.widget.ConstraintLayout>
-
-    </androidx.constraintlayout.widget.ConstraintLayout>
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </ScrollView>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

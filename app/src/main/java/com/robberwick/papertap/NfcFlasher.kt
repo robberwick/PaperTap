@@ -48,18 +48,26 @@ class NfcFlasher : AppCompatActivity() {
         get() = field
         set(isFlashing) {
             field = isFlashing
-            // Hide or show flashing UI and modal background
-            android.util.Log.d("NfcFlasher", "Setting mIsFlashing to: $isFlashing")
-            android.util.Log.d("NfcFlasher", "mWhileFlashingArea null? ${this.mWhileFlashingArea == null}")
-            android.util.Log.d("NfcFlasher", "mModalBackground null? ${this.mModalBackground == null}")
-            
-            this.mWhileFlashingArea?.visibility = if (isFlashing) android.view.View.VISIBLE else android.view.View.GONE
-            this.mModalBackground?.visibility = if (isFlashing) android.view.View.VISIBLE else android.view.View.GONE
-            this.mWhileFlashingArea?.requestLayout()
-            
-            android.util.Log.d("NfcFlasher", "After setting - whileFlashingArea visibility: ${this.mWhileFlashingArea?.visibility}")
-            android.util.Log.d("NfcFlasher", "After setting - modalBackground visibility: ${this.mModalBackground?.visibility}")
-            
+
+            // Update action card to show progress or instruction
+            runOnUiThread {
+                val activityIndicator = findViewById<android.widget.ProgressBar>(R.id.activityIndicator)
+                val nfcIcon = findViewById<android.widget.ImageView>(R.id.nfcIcon)
+                val actionText = findViewById<android.widget.TextView>(R.id.actionText)
+
+                if (isFlashing) {
+                    // Show spinner and "Writing ticket" text
+                    activityIndicator?.visibility = android.view.View.VISIBLE
+                    nfcIcon?.visibility = android.view.View.GONE
+                    actionText?.text = "Writing ticket"
+                } else {
+                    // Show NFC icon and "Hold to back of display" text
+                    activityIndicator?.visibility = android.view.View.GONE
+                    nfcIcon?.visibility = android.view.View.VISIBLE
+                    actionText?.text = "Hold to back of display"
+                }
+            }
+
             // Regardless of state change, progress should be reset to zero
             this.mProgressVal = 0
         }
@@ -70,11 +78,8 @@ class NfcFlasher : AppCompatActivity() {
     private var mNfcCheckHandler: Handler? = null
     private val mNfcCheckIntervalMs = 250L
     private val mProgressCheckInterval = 50L
-    private var mProgressBar: LinearProgressIndicator? = null
     private var mProgressVal: Int = 0
     private var mBitmap: Bitmap? = null
-    private var mWhileFlashingArea: ConstraintLayout? = null
-    private var mModalBackground: android.view.View? = null
     private var mImgFilePath: String? = null
     private var mImgFileUri: Uri? = null
 
@@ -193,14 +198,7 @@ class NfcFlasher : AppCompatActivity() {
          * Actual flasher stuff
          */
 
-        mWhileFlashingArea  = findViewById(R.id.whileFlashingArea)
-        mModalBackground = findViewById(R.id.modalBackground)
-        mProgressBar = findViewById(R.id.nfcFlashProgressbar)
-        
-        android.util.Log.d("NfcFlasher", "onCreate - Views initialized:")
-        android.util.Log.d("NfcFlasher", "  mWhileFlashingArea: $mWhileFlashingArea")
-        android.util.Log.d("NfcFlasher", "  mModalBackground: $mModalBackground")
-        android.util.Log.d("NfcFlasher", "  mProgressBar: $mProgressBar")
+        // Action card elements are accessed directly when needed via findViewById
 
         val originatingIntent = intent
 
@@ -296,14 +294,17 @@ class NfcFlasher : AppCompatActivity() {
         }
 
         // Load and display ticket details if available
+        // Check both barcodeData (legacy) and mTicketEntity (database)
         val ticketData = barcodeData?.ticketData
-        val ticketDetailsCard = findViewById<com.google.android.material.card.MaterialCardView>(R.id.flasherTicketDetailsCard)
-        val ticketJourneySummary = findViewById<android.widget.TextView>(R.id.flasherTicketJourneySummary)
-        val ticketDateTime = findViewById<android.widget.TextView>(R.id.flasherTicketDateTime)
-        val ticketType = findViewById<android.widget.TextView>(R.id.flasherTicketType)
-        val ticketReference = findViewById<android.widget.TextView>(R.id.flasherTicketReference)
 
         if (ticketData != null) {
+            // Display from barcode data (legacy mode)
+            val ticketDetailsCard = findViewById<com.google.android.material.card.MaterialCardView>(R.id.flasherTicketDetailsCard)
+            val ticketJourneySummary = findViewById<android.widget.TextView>(R.id.flasherTicketJourneySummary)
+            val ticketDateTime = findViewById<android.widget.TextView>(R.id.flasherTicketDateTime)
+            val ticketType = findViewById<android.widget.TextView>(R.id.flasherTicketType)
+            val ticketReference = findViewById<android.widget.TextView>(R.id.flasherTicketReference)
+
             ticketDetailsCard.visibility = android.view.View.VISIBLE
 
             // Journey summary (just origin → destination)
@@ -346,8 +347,9 @@ class NfcFlasher : AppCompatActivity() {
             } else {
                 ticketReference.visibility = android.view.View.GONE
             }
-        } else {
-            ticketDetailsCard.visibility = android.view.View.GONE
+        } else if (mTicketEntity != null) {
+            // Display from database ticket
+            displayTicketDetails(mTicketEntity!!)
         }
         
         this.startNfcCheckLoop()
@@ -555,10 +557,8 @@ class NfcFlasher : AppCompatActivity() {
     }
 
     private fun updateProgressBar(updated: Int) {
-        if (mProgressBar == null) {
-            mProgressBar = findViewById(R.id.nfcFlashProgressbar)
-        }
-        mProgressBar?.setProgress(updated, true)
+        // Progress bar removed - using indeterminate spinner in action card instead
+        // The spinner is shown/hidden by the mIsFlashing property setter
     }
     
     private fun playStartSound() {
