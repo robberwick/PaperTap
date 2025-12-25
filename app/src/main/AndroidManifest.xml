@@ -13,37 +13,13 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.NFCEInkWriter">
-        <activity android:name=".NfcFlasher" android:launchMode="singleTask">
-            <!--
-                Note: This is not currently working, cannot override AAR this way
-                @TODO - hook into foreground dispatch system
-                    - Suggested here: https://developer.android.com/guide/topics/connectivity/nfc/nfc.html#aar
-                    - Implementation: https://developer.android.com/guide/topics/connectivity/nfc/advanced-nfc#foreground-dispatch
-            -->
-            <!--<intent-filter>-->
-            <!--    <action android:name="android.nfc.action.NDEF_DISCOVERED" />-->
-
-            <!--    <category android:name="android.intent.category.DEFAULT" />-->
-
-            <!--    <data-->
-            <!--        android:host="ext"-->
-            <!--        android:pathPattern=".*waveshare.feng.nfctag.*"-->
-            <!--        android:scheme="vnd.android.nfc" />-->
-            <!--</intent-filter>-->
-        </activity>
-        <activity android:name=".SettingsActivity"
-            android:label="Settings"
-            android:parentActivityName=".MainActivity" />
-        <activity android:name=".AboutActivity" 
-            android:label="@string/about_title"
-            android:parentActivityName=".MainActivity" />
+        <!-- Ticket List Activity (Main/Launcher) -->
         <activity
-            android:name=".MainActivity"
+            android:name=".TicketListActivity"
             android:launchMode="singleTop"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
             <intent-filter>
@@ -67,6 +43,32 @@
                 <data android:mimeType="text/*" />
             </intent-filter>
         </activity>
+
+        <!-- Add Ticket Activity -->
+        <activity
+            android:name=".AddTicketActivity"
+            android:parentActivityName=".TicketListActivity" />
+
+        <!-- NFC Flasher Activity -->
+        <activity
+            android:name=".NfcFlasher"
+            android:launchMode="singleTask"
+            android:parentActivityName=".TicketListActivity" />
+
+        <!-- Settings Activity -->
+        <activity android:name=".SettingsActivity"
+            android:label="Settings"
+            android:parentActivityName=".TicketListActivity" />
+
+        <!-- About Activity -->
+        <activity android:name=".AboutActivity"
+            android:label="@string/about_title"
+            android:parentActivityName=".TicketListActivity" />
+
+        <!-- Legacy MainActivity (kept for backwards compatibility) -->
+        <activity
+            android:name=".MainActivity"
+            android:launchMode="singleTop" />
         <activity android:name="com.canhub.cropper.CropImageActivity"
             android:theme="@style/Base.Theme.AppCompat"/>
     </application>

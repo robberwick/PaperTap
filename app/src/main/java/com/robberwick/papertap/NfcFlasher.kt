@@ -22,21 +22,28 @@ import android.os.PatternMatcher
 import android.os.SystemClock
 import android.util.Log
 import android.widget.ImageView
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
+import com.google.android.material.card.MaterialCardView
 import com.google.android.material.progressindicator.LinearProgressIndicator
 import androidx.lifecycle.lifecycleScope
+import com.robberwick.papertap.database.TicketEntity
+import com.robberwick.papertap.database.TicketRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import waveshare.feng.nfctag.activity.WaveShareHandler
 import waveshare.feng.nfctag.activity.a
+import java.io.File
 import java.io.IOException
 import java.nio.charset.StandardCharsets
 import kotlin.math.sin
 
 class NfcFlasher : AppCompatActivity() {
+    private var mTicketEntity: TicketEntity? = null
+    private lateinit var ticketRepository: TicketRepository
     private var mIsFlashing = false
         get() = field
         set(isFlashing) {
@@ -92,40 +99,64 @@ class NfcFlasher : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_nfc_flasher)
-        
+
         // Setup toolbar with back button
         val toolbar: androidx.appcompat.widget.Toolbar = findViewById(R.id.toolbar)
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.setDisplayShowHomeEnabled(true)
 
+        // Initialize repository
+        ticketRepository = TicketRepository(this)
+
         /**
-         * Saved bitmap handling
+         * Load ticket from database or fallback to legacy image
          */
-        val savedUriStr = savedInstanceState?.getString("serializedGeneratedImgUri")
-        if (savedUriStr != null) {
-            mImgFileUri = Uri.parse(savedUriStr)
+        val ticketId = intent.getLongExtra("TICKET_ID", -1L)
+
+        if (ticketId != -1L) {
+            // Load ticket from database
+            lifecycleScope.launch {
+                mTicketEntity = withContext(Dispatchers.IO) {
+                    ticketRepository.getById(ticketId)
+                }
+
+                if (mTicketEntity != null) {
+                    loadTicketImage(mTicketEntity!!)
+                    displayTicketDetails(mTicketEntity!!)
+                } else {
+                    Toast.makeText(this@NfcFlasher, "Ticket not found", Toast.LENGTH_SHORT).show()
+                    finish()
+                }
+            }
         } else {
-            val intentExtras = intent.extras
-            mImgFilePath = intentExtras?.getString(IntentKeys.GeneratedImgPath)
-            if (mImgFilePath != null) {
-                // @TODO - handle exceptions, navigate back to prev activity
-                val fileRef = getFileStreamPath(mImgFilePath)
+            // Fallback to legacy image (for backwards compatibility)
+            val savedUriStr = savedInstanceState?.getString("serializedGeneratedImgUri")
+            if (savedUriStr != null) {
+                mImgFileUri = Uri.parse(savedUriStr)
+            } else {
+                val intentExtras = intent.extras
+                mImgFilePath = intentExtras?.getString(IntentKeys.GeneratedImgPath)
+                if (mImgFilePath != null) {
+                    val fileRef = getFileStreamPath(mImgFilePath)
+                    mImgFileUri = Uri.fromFile(fileRef)
+                }
+            }
+            if (mImgFileUri == null) {
+                val fileRef = getFileStreamPath(GeneratedImageFilename)
                 mImgFileUri = Uri.fromFile(fileRef)
             }
-        }
-        if (mImgFileUri == null) {
-            // Fallback to last generated image
-            val fileRef = getFileStreamPath(GeneratedImageFilename)
-            mImgFileUri = Uri.fromFile(fileRef)
-        }
 
-        val imagePreviewElem: ImageView = findViewById(R.id.previewImageView)
-        imagePreviewElem.setImageURI(mImgFileUri)
+            val imagePreviewElem: ImageView = findViewById(R.id.previewImageView)
+            imagePreviewElem.setImageURI(mImgFileUri)
 
-        if (mImgFileUri != null) {
-            val bmOptions = BitmapFactory.Options()
-            this.mBitmap = BitmapFactory.decodeFile(mImgFileUri!!.path, bmOptions)
+            if (mImgFileUri != null) {
+                val bmOptions = BitmapFactory.Options()
+                this.mBitmap = BitmapFactory.decodeFile(mImgFileUri!!.path, bmOptions)
+            }
+
+            // Load legacy ticket data from preferences
+            displayLegacyTicketDetails()
         }
 
         /**
@@ -586,6 +617,105 @@ class NfcFlasher : AppCompatActivity() {
             Log.d("NfcFlasher", "Tone completed")
         } catch (e: Exception) {
             Log.e("NfcFlasher", "Failed to play tone", e)
+        }
+    }
+
+    private fun loadTicketImage(ticket: TicketEntity) {
+        val imageFile = File(ticket.qrCodeImagePath)
+        if (imageFile.exists()) {
+            mImgFileUri = Uri.fromFile(imageFile)
+            val imagePreviewElem: ImageView = findViewById(R.id.previewImageView)
+            imagePreviewElem.setImageURI(mImgFileUri)
+
+            val bmOptions = BitmapFactory.Options()
+            mBitmap = BitmapFactory.decodeFile(imageFile.path, bmOptions)
+        } else {
+            Toast.makeText(this, "Ticket image not found", Toast.LENGTH_SHORT).show()
+            finish()
+        }
+    }
+
+    private fun displayTicketDetails(ticket: TicketEntity) {
+        val ticketDetailsCard: MaterialCardView = findViewById(R.id.flasherTicketDetailsCard)
+        val journeySummary: TextView = findViewById(R.id.flasherTicketJourneySummary)
+        val dateTime: TextView = findViewById(R.id.flasherTicketDateTime)
+        val ticketType: TextView = findViewById(R.id.flasherTicketType)
+        val reference: TextView = findViewById(R.id.flasherTicketReference)
+
+        ticketDetailsCard.visibility = android.view.View.VISIBLE
+        journeySummary.text = ticket.journeySummary
+
+        if (ticket.dateTime.isNotEmpty() && ticket.dateTime != "Unknown") {
+            dateTime.text = ticket.dateTime
+            dateTime.visibility = android.view.View.VISIBLE
+        } else {
+            dateTime.visibility = android.view.View.GONE
+        }
+
+        if (ticket.ticketType != null) {
+            ticketType.text = ticket.ticketType
+            ticketType.visibility = android.view.View.VISIBLE
+        } else {
+            ticketType.visibility = android.view.View.GONE
+        }
+
+        if (ticket.reference != null) {
+            reference.text = "Ref: ${ticket.reference}"
+            reference.visibility = android.view.View.VISIBLE
+        } else {
+            reference.visibility = android.view.View.GONE
+        }
+    }
+
+    private fun displayLegacyTicketDetails() {
+        val preferences = Preferences(this)
+        val ticketData = preferences.getTicketData()
+
+        if (ticketData != null) {
+            val ticketDetailsCard: MaterialCardView = findViewById(R.id.flasherTicketDetailsCard)
+            val journeySummary: TextView = findViewById(R.id.flasherTicketJourneySummary)
+            val dateTime: TextView = findViewById(R.id.flasherTicketDateTime)
+            val ticketType: TextView = findViewById(R.id.flasherTicketType)
+            val reference: TextView = findViewById(R.id.flasherTicketReference)
+
+            ticketDetailsCard.visibility = android.view.View.VISIBLE
+
+            val origin = ticketData.originStation ?: "Unknown"
+            val dest = ticketData.destinationStation ?: "Unknown"
+            journeySummary.text = "$origin → $dest"
+
+            val date = ticketData.travelDate ?: ""
+            val time = ticketData.travelTime ?: ""
+            val shouldShowTime = time.isNotEmpty() && time != "00:00"
+
+            if (date.isNotEmpty()) {
+                dateTime.text = if (shouldShowTime) "$date $time" else date
+                dateTime.visibility = android.view.View.VISIBLE
+            } else {
+                dateTime.visibility = android.view.View.GONE
+            }
+
+            val typeText = buildString {
+                ticketData.ticketType?.let { append(it) }
+                if (ticketData.ticketClass != null && ticketData.ticketType != null) {
+                    append(" • ")
+                }
+                ticketData.ticketClass?.let { append(it) }
+            }
+
+            if (typeText.isNotEmpty()) {
+                ticketType.text = typeText
+                ticketType.visibility = android.view.View.VISIBLE
+            } else {
+                ticketType.visibility = android.view.View.GONE
+            }
+
+            if (ticketData.ticketReference != null) {
+                reference.text = "Ref: ${ticketData.ticketReference}"
+                reference.visibility = android.view.View.VISIBLE
+            } else {
+                reference.visibility = android.view.View.GONE
+            }
         }
     }
 }
