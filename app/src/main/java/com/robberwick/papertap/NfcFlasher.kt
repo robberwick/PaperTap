@@ -115,7 +115,7 @@ class NfcFlasher : AppCompatActivity() {
         ticketRepository = TicketRepository(this)
 
         /**
-         * Load ticket from database or fallback to legacy image
+         * Load ticket from database
          */
         val ticketId = intent.getLongExtra("TICKET_ID", -1L)
 
@@ -144,54 +144,8 @@ class NfcFlasher : AppCompatActivity() {
                 }
             }
         } else {
-            // Load barcode data from preferences and generate bitmap
-            val preferences = Preferences(this)
-            val barcodeData = preferences.getBarcodeData()
-
-            if (barcodeData != null) {
-                // Generate bitmap from barcode data
-                try {
-                    val (screenWidth, screenHeight) = preferences.getScreenSizePixels()
-                    val showReference = preferences.getShowTicketReference()
-                    val ticketReference = if (showReference) barcodeData.ticketData?.ticketReference else null
-
-                    android.util.Log.d("NfcFlasher", "onCreate - showReference: $showReference")
-                    android.util.Log.d("NfcFlasher", "onCreate - ticketData: ${barcodeData.ticketData}")
-                    android.util.Log.d("NfcFlasher", "onCreate - ticketReference: $ticketReference")
-
-                    this.mBitmap = BarcodeGenerator.generateBarcodeWithReference(
-                        rawData = barcodeData.rawData,
-                        format = when (barcodeData.barcodeFormat) {
-                            com.google.mlkit.vision.barcode.common.Barcode.FORMAT_AZTEC -> com.google.zxing.BarcodeFormat.AZTEC
-                            com.google.mlkit.vision.barcode.common.Barcode.FORMAT_QR_CODE -> com.google.zxing.BarcodeFormat.QR_CODE
-                            com.google.mlkit.vision.barcode.common.Barcode.FORMAT_DATA_MATRIX -> com.google.zxing.BarcodeFormat.DATA_MATRIX
-                            com.google.mlkit.vision.barcode.common.Barcode.FORMAT_PDF417 -> com.google.zxing.BarcodeFormat.PDF_417
-                            else -> com.google.zxing.BarcodeFormat.QR_CODE
-                        },
-                        width = screenWidth,
-                        height = screenHeight,
-                        edgePadding = preferences.getQrPadding(),
-                        ticketReference = ticketReference
-                    )
-
-                    // Display preview
-                    val imagePreviewElem: ImageView = findViewById(R.id.previewImageView)
-                    imagePreviewElem.setImageBitmap(this.mBitmap)
-
-                    android.util.Log.d("NfcFlasher", "Generated bitmap from barcode data: ${screenWidth}x${screenHeight}")
-                } catch (e: Exception) {
-                    android.util.Log.e("NfcFlasher", "Failed to generate barcode", e)
-                    Toast.makeText(this, "Failed to generate barcode: ${e.message}", Toast.LENGTH_LONG).show()
-                }
-
-                // Display ticket details if available
-                if (barcodeData.ticketData != null) {
-                    displayBarcodeTicketDetails(barcodeData.ticketData)
-                }
-            } else {
-                Toast.makeText(this, "No barcode data found", Toast.LENGTH_LONG).show()
-                finish()
-            }
+            Toast.makeText(this, "No ticket provided", Toast.LENGTH_SHORT).show()
+            finish()
         }
 
         /**
@@ -257,101 +211,12 @@ class NfcFlasher : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
 
-        // Regenerate bitmap from barcode data in case settings changed
-        val preferences = Preferences(this)
-        val barcodeData = preferences.getBarcodeData()
-
-        if (barcodeData != null && mTicketEntity == null) {
-            // Only regenerate if not using database ticket (mTicketEntity == null means legacy mode)
-            try {
-                val (screenWidth, screenHeight) = preferences.getScreenSizePixels()
-                val showReference = preferences.getShowTicketReference()
-                val ticketReference = if (showReference) barcodeData.ticketData?.ticketReference else null
-
-                this.mBitmap = BarcodeGenerator.generateBarcodeWithReference(
-                    rawData = barcodeData.rawData,
-                    format = when (barcodeData.barcodeFormat) {
-                        com.google.mlkit.vision.barcode.common.Barcode.FORMAT_AZTEC -> com.google.zxing.BarcodeFormat.AZTEC
-                        com.google.mlkit.vision.barcode.common.Barcode.FORMAT_QR_CODE -> com.google.zxing.BarcodeFormat.QR_CODE
-                        com.google.mlkit.vision.barcode.common.Barcode.FORMAT_DATA_MATRIX -> com.google.zxing.BarcodeFormat.DATA_MATRIX
-                        com.google.mlkit.vision.barcode.common.Barcode.FORMAT_PDF417 -> com.google.zxing.BarcodeFormat.PDF_417
-                        else -> com.google.zxing.BarcodeFormat.QR_CODE
-                    },
-                    width = screenWidth,
-                    height = screenHeight,
-                    edgePadding = preferences.getQrPadding(),
-                    ticketReference = ticketReference
-                )
-
-                // Update preview
-                val imagePreviewElem: ImageView = findViewById(R.id.previewImageView)
-                imagePreviewElem.setImageBitmap(this.mBitmap)
-
-                android.util.Log.d("NfcFlasher", "Regenerated bitmap from barcode data: ${screenWidth}x${screenHeight}")
-            } catch (e: Exception) {
-                android.util.Log.e("NfcFlasher", "Failed to regenerate barcode", e)
-            }
-        }
-
-        // Load and display ticket details if available
-        // Check both barcodeData (legacy) and mTicketEntity (database)
-        val ticketData = barcodeData?.ticketData
-
-        if (ticketData != null) {
-            // Display from barcode data (legacy mode)
-            val ticketDetailsCard = findViewById<com.google.android.material.card.MaterialCardView>(R.id.flasherTicketDetailsCard)
-            val ticketJourneySummary = findViewById<android.widget.TextView>(R.id.flasherTicketJourneySummary)
-            val ticketDateTime = findViewById<android.widget.TextView>(R.id.flasherTicketDateTime)
-            val ticketType = findViewById<android.widget.TextView>(R.id.flasherTicketType)
-            val ticketReference = findViewById<android.widget.TextView>(R.id.flasherTicketReference)
-
-            ticketDetailsCard.visibility = android.view.View.VISIBLE
-
-            // Journey summary (just origin → destination)
-            val origin = ticketData.originStation ?: "Unknown"
-            val dest = ticketData.destinationStation ?: "Unknown"
-            ticketJourneySummary.text = "$origin → $dest"
-
-            // Date and time
-            val date = ticketData.travelDate ?: ""
-            val time = ticketData.travelTime ?: ""
-            val shouldShowTime = time.isNotEmpty() && time != "00:00"
-
-            if (date.isNotEmpty()) {
-                ticketDateTime.text = if (shouldShowTime) "$date $time" else date
-                ticketDateTime.visibility = android.view.View.VISIBLE
-            } else {
-                ticketDateTime.visibility = android.view.View.GONE
-            }
-
-            // Ticket type and class
-            val typeText = buildString {
-                ticketData.ticketType?.let { append(it) }
-                if (ticketData.ticketClass != null && ticketData.ticketType != null) {
-                    append(" • ")
-                }
-                ticketData.ticketClass?.let { append(it) }
-            }
-
-            if (typeText.isNotEmpty()) {
-                ticketType.text = typeText
-                ticketType.visibility = android.view.View.VISIBLE
-            } else {
-                ticketType.visibility = android.view.View.GONE
-            }
-
-            // Ticket reference
-            if (ticketData.ticketReference != null) {
-                ticketReference.text = "Ref: ${ticketData.ticketReference}"
-                ticketReference.visibility = android.view.View.VISIBLE
-            } else {
-                ticketReference.visibility = android.view.View.GONE
-            }
-        } else if (mTicketEntity != null) {
-            // Display from database ticket
+        // Regenerate bitmap from database ticket in case settings changed
+        if (mTicketEntity != null) {
+            loadTicketImage(mTicketEntity!!)
             displayTicketDetails(mTicketEntity!!)
         }
-        
+
         this.startNfcCheckLoop()
         this.enableForegroundDispatch()
     }
@@ -759,102 +624,4 @@ class NfcFlasher : AppCompatActivity() {
         }
     }
 
-    private fun displayLegacyTicketDetails() {
-        val preferences = Preferences(this)
-        val ticketData = preferences.getTicketData()
-
-        if (ticketData != null) {
-            val ticketDetailsCard: MaterialCardView = findViewById(R.id.flasherTicketDetailsCard)
-            val journeySummary: TextView = findViewById(R.id.flasherTicketJourneySummary)
-            val dateTime: TextView = findViewById(R.id.flasherTicketDateTime)
-            val ticketType: TextView = findViewById(R.id.flasherTicketType)
-            val reference: TextView = findViewById(R.id.flasherTicketReference)
-
-            ticketDetailsCard.visibility = android.view.View.VISIBLE
-
-            val origin = ticketData.originStation ?: "Unknown"
-            val dest = ticketData.destinationStation ?: "Unknown"
-            journeySummary.text = "$origin → $dest"
-
-            val date = ticketData.travelDate ?: ""
-            val time = ticketData.travelTime ?: ""
-            val shouldShowTime = time.isNotEmpty() && time != "00:00"
-
-            if (date.isNotEmpty()) {
-                dateTime.text = if (shouldShowTime) "$date $time" else date
-                dateTime.visibility = android.view.View.VISIBLE
-            } else {
-                dateTime.visibility = android.view.View.GONE
-            }
-
-            val typeText = buildString {
-                ticketData.ticketType?.let { append(it) }
-                if (ticketData.ticketClass != null && ticketData.ticketType != null) {
-                    append(" • ")
-                }
-                ticketData.ticketClass?.let { append(it) }
-            }
-
-            if (typeText.isNotEmpty()) {
-                ticketType.text = typeText
-                ticketType.visibility = android.view.View.VISIBLE
-            } else {
-                ticketType.visibility = android.view.View.GONE
-            }
-
-            if (ticketData.ticketReference != null) {
-                reference.text = "Ref: ${ticketData.ticketReference}"
-                reference.visibility = android.view.View.VISIBLE
-            } else {
-                reference.visibility = android.view.View.GONE
-            }
-        }
-    }
-
-    private fun displayBarcodeTicketDetails(ticketData: TicketData) {
-        val ticketDetailsCard: MaterialCardView = findViewById(R.id.flasherTicketDetailsCard)
-        val journeySummary: TextView = findViewById(R.id.flasherTicketJourneySummary)
-        val dateTime: TextView = findViewById(R.id.flasherTicketDateTime)
-        val ticketType: TextView = findViewById(R.id.flasherTicketType)
-        val reference: TextView = findViewById(R.id.flasherTicketReference)
-
-        ticketDetailsCard.visibility = android.view.View.VISIBLE
-
-        val origin = ticketData.originStation ?: "Unknown"
-        val dest = ticketData.destinationStation ?: "Unknown"
-        journeySummary.text = "$origin → $dest"
-
-        val date = ticketData.travelDate ?: ""
-        val time = ticketData.travelTime ?: ""
-        val shouldShowTime = time.isNotEmpty() && time != "00:00"
-
-        if (date.isNotEmpty()) {
-            dateTime.text = if (shouldShowTime) "$date $time" else date
-            dateTime.visibility = android.view.View.VISIBLE
-        } else {
-            dateTime.visibility = android.view.View.GONE
-        }
-
-        val typeText = buildString {
-            ticketData.ticketType?.let { append(it) }
-            if (ticketData.ticketClass != null && ticketData.ticketType != null) {
-                append(" • ")
-            }
-            ticketData.ticketClass?.let { append(it) }
-        }
-
-        if (typeText.isNotEmpty()) {
-            ticketType.text = typeText
-            ticketType.visibility = android.view.View.VISIBLE
-        } else {
-            ticketType.visibility = android.view.View.GONE
-        }
-
-        if (ticketData.ticketReference != null) {
-            reference.text = "Ref: ${ticketData.ticketReference}"
-            reference.visibility = android.view.View.VISIBLE
-        } else {
-            reference.visibility = android.view.View.GONE
-        }
-    }
 }

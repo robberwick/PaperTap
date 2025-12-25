@@ -13,6 +13,10 @@
         <item name="colorSecondaryContainer">@color/tan_dark</item>
         <item name="colorOnSecondaryContainer">@color/tan_light</item>
 
+        <!-- Tertiary brand color (for action cards) -->
+        <item name="colorTertiaryContainer">#FF1E3A5F</item>
+        <item name="colorOnTertiaryContainer">@color/blue_light</item>
+
         <!-- Surface colors (backgrounds for cards, dialogs, etc.) -->
         <item name="colorSurface">#FF1E1E1E</item>
         <item name="colorOnSurface">@color/blue_lighter</item>

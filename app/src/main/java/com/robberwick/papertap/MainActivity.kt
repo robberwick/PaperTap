@@ -18,6 +18,7 @@ import com.google.android.material.card.MaterialCardView
 import androidx.lifecycle.lifecycleScope
 import com.canhub.cropper.CropImage
 import com.canhub.cropper.CropImageView
+import com.robberwick.papertap.database.TicketRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -30,6 +31,7 @@ import java.net.URL
 
 class MainActivity : AppCompatActivity() {
     private var mPreferencesController: Preferences? = null
+    private lateinit var ticketRepository: TicketRepository
     private var mHasReFlashableImage: Boolean = false
     private var mSharedImageUri: Uri? = null
     private var mSharedText: String? = null
@@ -51,6 +53,9 @@ class MainActivity : AppCompatActivity() {
 
         // Get user preferences
         mPreferencesController = Preferences(this)
+
+        // Initialize database repository
+        ticketRepository = TicketRepository(this)
 
         // Check for previously generated image, enable re-flash button if available
         checkReFlashAbility()
@@ -277,11 +282,15 @@ class MainActivity : AppCompatActivity() {
                         Toast.LENGTH_SHORT
                     ).show()
 
-                    // Store barcode data (includes ticket data if available)
-                    mPreferencesController!!.saveBarcodeData(barcodeData)
+                    // Store ticket in database
+                    val ticketId = withContext(Dispatchers.IO) {
+                        ticketRepository.insertTicket(barcodeData)
+                    }
 
-                    // Navigate to NFC flasher (barcode will be regenerated there)
-                    val navIntent = Intent(this@MainActivity, NfcFlasher::class.java)
+                    // Navigate to NFC flasher with ticket ID
+                    val navIntent = Intent(this@MainActivity, NfcFlasher::class.java).apply {
+                        putExtra("ticketId", ticketId)
+                    }
                     startActivity(navIntent)
                 } else {
                     // QR not found - let user manually select area
@@ -441,104 +450,112 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkReFlashAbility() {
-        val barcodeData = mPreferencesController!!.getBarcodeData()
-
-        val welcomeCard = findViewById<MaterialCardView>(R.id.welcomeCard)
-        val reflashButton = findViewById<Button>(R.id.reflashButton)
-        val reflashPreviewCard = findViewById<MaterialCardView>(R.id.reflashPreviewCard)
-        val reflashImagePreview = findViewById<ImageView>(R.id.reflashButtonImage)
-        val ticketDetailsCard = findViewById<MaterialCardView>(R.id.ticketDetailsCard)
-        val ticketJourneySummary = findViewById<TextView>(R.id.ticketJourneySummary)
-        val ticketDateTime = findViewById<TextView>(R.id.ticketDateTime)
-        val ticketType = findViewById<TextView>(R.id.ticketType)
-        val ticketReference = findViewById<TextView>(R.id.ticketReference)
-
-        if (barcodeData != null) {
-            // Hide welcome, show reflash UI
-            mHasReFlashableImage = true
-            welcomeCard.visibility = android.view.View.GONE
-            reflashButton.visibility = android.view.View.VISIBLE
-            reflashPreviewCard.visibility = android.view.View.VISIBLE
-
-            // Generate preview bitmap from barcode data
-            try {
-                val showReference = mPreferencesController!!.getShowTicketReference()
-                val ticketReference = if (showReference) barcodeData.ticketData?.ticketReference else null
-
-                val previewBitmap = BarcodeGenerator.generateBarcodeWithReference(
-                    rawData = barcodeData.rawData,
-                    format = when (barcodeData.barcodeFormat) {
-                        com.google.mlkit.vision.barcode.common.Barcode.FORMAT_AZTEC -> com.google.zxing.BarcodeFormat.AZTEC
-                        com.google.mlkit.vision.barcode.common.Barcode.FORMAT_QR_CODE -> com.google.zxing.BarcodeFormat.QR_CODE
-                        com.google.mlkit.vision.barcode.common.Barcode.FORMAT_DATA_MATRIX -> com.google.zxing.BarcodeFormat.DATA_MATRIX
-                        com.google.mlkit.vision.barcode.common.Barcode.FORMAT_PDF417 -> com.google.zxing.BarcodeFormat.PDF_417
-                        else -> com.google.zxing.BarcodeFormat.QR_CODE
-                    },
-                    width = 200,
-                    height = 200,
-                    edgePadding = mPreferencesController!!.getQrPadding(),
-                    ticketReference = ticketReference
-                )
-                reflashImagePreview.setImageBitmap(previewBitmap)
-            } catch (e: Exception) {
-                android.util.Log.e("MainActivity", "Failed to generate preview barcode", e)
+        lifecycleScope.launch {
+            val mostRecentTicket = withContext(Dispatchers.IO) {
+                ticketRepository.getMostRecentTicket()
             }
 
-            // Show ticket details if available
-            val ticketData = barcodeData.ticketData
-            if (ticketData != null) {
-                ticketDetailsCard.visibility = android.view.View.VISIBLE
+            val welcomeCard = findViewById<MaterialCardView>(R.id.welcomeCard)
+            val reflashButton = findViewById<Button>(R.id.reflashButton)
+            val reflashPreviewCard = findViewById<MaterialCardView>(R.id.reflashPreviewCard)
+            val reflashImagePreview = findViewById<ImageView>(R.id.reflashButtonImage)
+            val ticketDetailsCard = findViewById<MaterialCardView>(R.id.ticketDetailsCard)
+            val ticketJourneySummary = findViewById<TextView>(R.id.ticketJourneySummary)
+            val ticketDateTime = findViewById<TextView>(R.id.ticketDateTime)
+            val ticketType = findViewById<TextView>(R.id.ticketType)
+            val ticketReference = findViewById<TextView>(R.id.ticketReference)
 
-                // Journey summary (just origin → destination)
-                val origin = ticketData.originStation ?: "Unknown"
-                val dest = ticketData.destinationStation ?: "Unknown"
-                ticketJourneySummary.text = "$origin → $dest"
+            if (mostRecentTicket != null) {
+                // Hide welcome, show reflash UI
+                mHasReFlashableImage = true
+                welcomeCard.visibility = android.view.View.GONE
+                reflashButton.visibility = android.view.View.VISIBLE
+                reflashPreviewCard.visibility = android.view.View.VISIBLE
 
-                // Date and time
-                val date = ticketData.travelDate ?: ""
-                val time = ticketData.travelTime ?: ""
-                val shouldShowTime = time.isNotEmpty() && time != "00:00"
+                // Get ticket data from entity
+                val ticketData = mostRecentTicket.getTicketData()
 
-                if (date.isNotEmpty()) {
-                    ticketDateTime.text = if (shouldShowTime) "$date $time" else date
-                    ticketDateTime.visibility = android.view.View.VISIBLE
-                } else {
-                    ticketDateTime.visibility = android.view.View.GONE
-                }
+                // Generate preview bitmap from ticket data
+                if (ticketData != null && ticketData.rawData.isNotEmpty()) {
+                    try {
+                        val showReference = mPreferencesController!!.getShowTicketReference()
+                        val displayReference = if (showReference) ticketData.ticketReference else null
 
-                // Ticket type and class
-                val typeText = buildString {
-                    ticketData.ticketType?.let { append(it) }
-                    if (ticketData.ticketClass != null && ticketData.ticketType != null) {
-                        append(" • ")
+                        val previewBitmap = BarcodeGenerator.generateBarcodeWithReference(
+                            rawData = ticketData.rawData,
+                            format = when (ticketData.barcodeFormat) {
+                                com.google.mlkit.vision.barcode.common.Barcode.FORMAT_AZTEC -> com.google.zxing.BarcodeFormat.AZTEC
+                                com.google.mlkit.vision.barcode.common.Barcode.FORMAT_QR_CODE -> com.google.zxing.BarcodeFormat.QR_CODE
+                                com.google.mlkit.vision.barcode.common.Barcode.FORMAT_DATA_MATRIX -> com.google.zxing.BarcodeFormat.DATA_MATRIX
+                                com.google.mlkit.vision.barcode.common.Barcode.FORMAT_PDF417 -> com.google.zxing.BarcodeFormat.PDF_417
+                                else -> com.google.zxing.BarcodeFormat.QR_CODE
+                            },
+                            width = 200,
+                            height = 200,
+                            edgePadding = mPreferencesController!!.getQrPadding(),
+                            ticketReference = displayReference
+                        )
+                        reflashImagePreview.setImageBitmap(previewBitmap)
+                    } catch (e: Exception) {
+                        android.util.Log.e("MainActivity", "Failed to generate preview barcode", e)
                     }
-                    ticketData.ticketClass?.let { append(it) }
                 }
 
-                if (typeText.isNotEmpty()) {
-                    ticketType.text = typeText
-                    ticketType.visibility = android.view.View.VISIBLE
-                } else {
-                    ticketType.visibility = android.view.View.GONE
-                }
+                // Show ticket details if available (only if it has station info - i.e., UK rail ticket)
+                if (ticketData != null && ticketData.originStation != null) {
+                    ticketDetailsCard.visibility = android.view.View.VISIBLE
 
-                // Ticket reference
-                if (ticketData.ticketReference != null) {
-                    ticketReference.text = "Ref: ${ticketData.ticketReference}"
-                    ticketReference.visibility = android.view.View.VISIBLE
+                    // Journey summary (just origin → destination)
+                    val origin = ticketData.originStation ?: "Unknown"
+                    val dest = ticketData.destinationStation ?: "Unknown"
+                    ticketJourneySummary.text = "$origin → $dest"
+
+                    // Date and time
+                    val date = ticketData.travelDate ?: ""
+                    val time = ticketData.travelTime ?: ""
+                    val shouldShowTime = time.isNotEmpty() && time != "00:00"
+
+                    if (date.isNotEmpty()) {
+                        ticketDateTime.text = if (shouldShowTime) "$date $time" else date
+                        ticketDateTime.visibility = android.view.View.VISIBLE
+                    } else {
+                        ticketDateTime.visibility = android.view.View.GONE
+                    }
+
+                    // Ticket type and class
+                    val typeText = buildString {
+                        ticketData.ticketType?.let { append(it) }
+                        if (ticketData.ticketClass != null && ticketData.ticketType != null) {
+                            append(" • ")
+                        }
+                        ticketData.ticketClass?.let { append(it) }
+                    }
+
+                    if (typeText.isNotEmpty()) {
+                        ticketType.text = typeText
+                        ticketType.visibility = android.view.View.VISIBLE
+                    } else {
+                        ticketType.visibility = android.view.View.GONE
+                    }
+
+                    // Ticket reference
+                    if (ticketData.ticketReference != null) {
+                        ticketReference.text = "Ref: ${ticketData.ticketReference}"
+                        ticketReference.visibility = android.view.View.VISIBLE
+                    } else {
+                        ticketReference.visibility = android.view.View.GONE
+                    }
                 } else {
-                    ticketReference.visibility = android.view.View.GONE
+                    ticketDetailsCard.visibility = android.view.View.GONE
                 }
             } else {
+                // Show welcome, hide reflash UI
+                mHasReFlashableImage = false
+                welcomeCard.visibility = android.view.View.VISIBLE
+                reflashButton.visibility = android.view.View.GONE
+                reflashPreviewCard.visibility = android.view.View.GONE
                 ticketDetailsCard.visibility = android.view.View.GONE
             }
-        } else {
-            // Show welcome, hide reflash UI
-            mHasReFlashableImage = false
-            welcomeCard.visibility = android.view.View.VISIBLE
-            reflashButton.visibility = android.view.View.GONE
-            reflashPreviewCard.visibility = android.view.View.GONE
-            ticketDetailsCard.visibility = android.view.View.GONE
         }
     }
     
@@ -652,11 +669,15 @@ class MainActivity : AppCompatActivity() {
                         Toast.LENGTH_SHORT
                     ).show()
 
-                    // Store barcode data (includes ticket data if available)
-                    mPreferencesController!!.saveBarcodeData(barcodeData)
+                    // Store ticket in database
+                    val ticketId = withContext(Dispatchers.IO) {
+                        ticketRepository.insertTicket(barcodeData)
+                    }
 
-                    // Navigate to NFC flasher (barcode will be regenerated there)
-                    val navIntent = Intent(this@MainActivity, NfcFlasher::class.java)
+                    // Navigate to NFC flasher with ticket ID
+                    val navIntent = Intent(this@MainActivity, NfcFlasher::class.java).apply {
+                        putExtra("ticketId", ticketId)
+                    }
                     startActivity(navIntent)
                 } else {
                     // QR not found

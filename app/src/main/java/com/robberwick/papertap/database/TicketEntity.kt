@@ -18,7 +18,11 @@ data class TicketEntity(
     // Store TicketData as JSON
     val ticketDataJson: String?,
 
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+
+    // Store origin and destination separately for duplicate detection
+    val originStation: String? = null,
+    val destinationStation: String? = null
 ) {
     companion object {
         fun fromTicketData(
@@ -52,7 +56,9 @@ data class TicketEntity(
                 ticketType = formattedTicketType,
                 reference = ticketData?.ticketReference,
                 qrCodeImagePath = qrCodeImagePath,
-                ticketDataJson = ticketData?.toJson()
+                ticketDataJson = ticketData?.toJson(),
+                originStation = ticketData?.originStation,
+                destinationStation = ticketData?.destinationStation
             )
         }
     }

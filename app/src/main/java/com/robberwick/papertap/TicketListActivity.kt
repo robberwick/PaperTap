@@ -3,31 +3,27 @@ package com.robberwick.papertap
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.GravityCompat
-import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.floatingactionbutton.FloatingActionButton
-import com.google.android.material.navigation.NavigationView
 import com.google.android.material.snackbar.Snackbar
 import com.robberwick.papertap.database.TicketRepository
 import kotlinx.coroutines.launch
 import android.widget.TextView
 
-class TicketListActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
+class TicketListActivity : AppCompatActivity() {
 
     private lateinit var ticketRepository: TicketRepository
     private lateinit var ticketAdapter: TicketAdapter
     private lateinit var recyclerView: RecyclerView
     private lateinit var emptyStateText: TextView
-    private lateinit var drawerLayout: DrawerLayout
 
     companion object {
         private const val REQUEST_PICK_DOCUMENT = 1001
@@ -41,19 +37,6 @@ class TicketListActivity : AppCompatActivity(), NavigationView.OnNavigationItemS
         val toolbar: MaterialToolbar = findViewById(R.id.toolbar)
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayShowTitleEnabled(false)
-
-        // Setup drawer layout
-        drawerLayout = findViewById(R.id.drawerLayout)
-        val toggle = ActionBarDrawerToggle(
-            this, drawerLayout, toolbar,
-            R.string.navigation_drawer_open, R.string.navigation_drawer_close
-        )
-        drawerLayout.addDrawerListener(toggle)
-        toggle.syncState()
-
-        // Setup navigation view
-        val navigationView: NavigationView = findViewById(R.id.navigationView)
-        navigationView.setNavigationItemSelectedListener(this)
 
         // Initialize repository
         ticketRepository = TicketRepository(this)
@@ -181,24 +164,22 @@ class TicketListActivity : AppCompatActivity(), NavigationView.OnNavigationItemS
         itemTouchHelper.attachToRecyclerView(recyclerView)
     }
 
-    override fun onNavigationItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            R.id.nav_settings -> {
-                startActivity(Intent(this, SettingsActivity::class.java))
-            }
-            R.id.nav_about -> {
-                startActivity(Intent(this, AboutActivity::class.java))
-            }
-        }
-        drawerLayout.closeDrawer(GravityCompat.START)
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.ticket_list_menu, menu)
         return true
     }
 
-    override fun onBackPressed() {
-        if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
-            drawerLayout.closeDrawer(GravityCompat.START)
-        } else {
-            super.onBackPressed()
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_settings -> {
+                startActivity(Intent(this, SettingsActivity::class.java))
+                true
+            }
+            R.id.action_about -> {
+                startActivity(Intent(this, AboutActivity::class.java))
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
         }
     }
 }

@@ -45,10 +45,7 @@ object Constants {
 
 object PrefKeys {
     var DisplaySize = "Display_Size"
-    var GeneratedImgPath = "Generated_Image_Path"
     var QrPadding = "Qr_Padding"
-    var TicketData = "Ticket_Data"
-    var BarcodeData = "Barcode_Data"
     var ShowTicketReference = "Show_Ticket_Reference"
 }
 

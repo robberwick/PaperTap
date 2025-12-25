@@ -73,51 +73,7 @@ class Preferences {
         }
     }
     
-    fun saveTicketData(ticketData: TicketData) {
-        with(getPreferences().edit()) {
-            putString(PreferenceKeys.TicketData, ticketData.toJson())
-            apply()
-        }
-    }
-    
-    fun getTicketData(): TicketData? {
-        val json = getPreferences().getString(PreferenceKeys.TicketData, null)
-        return if (json != null) {
-            TicketData.fromJson(json)
-        } else {
-            null
-        }
-    }
-    
-    fun clearTicketData() {
-        with(getPreferences().edit()) {
-            remove(PreferenceKeys.TicketData)
-            apply()
-        }
-    }
 
-    fun saveBarcodeData(barcodeData: BarcodeData) {
-        with(getPreferences().edit()) {
-            putString(PreferenceKeys.BarcodeData, barcodeData.toJson())
-            apply()
-        }
-    }
-
-    fun getBarcodeData(): BarcodeData? {
-        val json = getPreferences().getString(PreferenceKeys.BarcodeData, null)
-        return if (json != null) {
-            BarcodeData.fromJson(json)
-        } else {
-            null
-        }
-    }
-
-    fun clearBarcodeData() {
-        with(getPreferences().edit()) {
-            remove(PreferenceKeys.BarcodeData)
-            apply()
-        }
-    }
 
     fun getShowTicketReference(): Boolean {
         val prefs = getPreferences()

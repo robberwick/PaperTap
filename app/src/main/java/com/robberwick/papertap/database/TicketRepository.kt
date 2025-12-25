@@ -2,6 +2,8 @@ package com.robberwick.papertap.database
 
 import android.content.Context
 import androidx.lifecycle.LiveData
+import com.robberwick.papertap.BarcodeData
+import com.robberwick.papertap.TicketData
 import java.io.File
 
 class TicketRepository(context: Context) {
@@ -51,5 +53,62 @@ class TicketRepository(context: Context) {
 
     fun getTicketsDirectory(): File {
         return ticketsDir
+    }
+
+    /**
+     * Insert a ticket from BarcodeData
+     * Returns the ID of the inserted ticket, or the ID of an existing duplicate if found
+     */
+    suspend fun insertTicket(barcodeData: BarcodeData): Long {
+        // If there's no TicketData (not a UK rail ticket), create a minimal TicketData
+        // that just wraps the raw barcode data
+        val ticketData = barcodeData.ticketData ?: TicketData(
+            originStation = null,
+            destinationStation = null,
+            travelDate = null,
+            travelTime = null,
+            ticketType = null,
+            railcardType = null,
+            ticketClass = null,
+            ticketReference = null,
+            rawData = barcodeData.rawData,
+            barcodeFormat = barcodeData.barcodeFormat
+        )
+
+        // Create a temporary entity to get the formatted data
+        val tempEntity = TicketEntity.fromTicketData(ticketData, "")
+
+        // First, check for exact ticketDataJson match (handles all cases including generic barcodes)
+        tempEntity.ticketDataJson?.let { jsonString ->
+            val exactMatch = ticketDao.findDuplicateByTicketData(jsonString)
+            if (exactMatch != null) {
+                return exactMatch.id
+            }
+        }
+
+        // Check by reference + origin + destination
+        // This properly handles return journeys with same reference but swapped stations
+        val existingTicket = ticketDao.findDuplicate(
+            reference = ticketData.ticketReference,
+            originStation = ticketData.originStation,
+            destinationStation = ticketData.destinationStation
+        )
+
+        if (existingTicket != null) {
+            return existingTicket.id
+        }
+
+        // No duplicate found, insert new ticket
+        val imagePath = getQrCodeImagePath(System.currentTimeMillis())
+        val ticketEntity = TicketEntity.fromTicketData(ticketData, imagePath)
+        return ticketDao.insert(ticketEntity)
+    }
+
+    /**
+     * Get the most recently created ticket
+     */
+    suspend fun getMostRecentTicket(): TicketEntity? {
+        val tickets = ticketDao.getAllTicketsSync()
+        return tickets.firstOrNull()
     }
 }
