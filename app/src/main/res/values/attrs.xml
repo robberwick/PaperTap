@@ -1,0 +1,7 @@
+<resources>
+    <!-- Custom highlight color attributes for Material Design 3 theme -->
+    <attr name="colorHighlight" format="color" />
+    <attr name="colorOnHighlight" format="color" />
+    <attr name="colorHighlightContainer" format="color" />
+    <attr name="colorOnHighlightContainer" format="color" />
+</resources>

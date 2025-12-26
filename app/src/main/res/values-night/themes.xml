@@ -1,48 +1,74 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
+<resources>
     <!-- Base application theme - Material 3 Dark -->
     <style name="Theme.NFCEInkWriter" parent="Theme.Material3.Dark.NoActionBar">
         <!-- Primary brand color -->
-        <item name="colorPrimary">@color/blue_dark</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="colorPrimaryContainer">#FF2E3440</item>
-        <item name="colorOnPrimaryContainer">@color/blue_lighter</item>
+        <item name="colorPrimary">@color/md_theme_primary</item>
+        <item name="colorOnPrimary">@color/md_theme_onPrimary</item>
+        <item name="colorPrimaryContainer">@color/md_theme_primaryContainer</item>
+        <item name="colorOnPrimaryContainer">@color/md_theme_onPrimaryContainer</item>
 
         <!-- Secondary brand color -->
-        <item name="colorSecondary">@color/tan_light</item>
-        <item name="colorOnSecondary">@color/tan_darkest</item>
-        <item name="colorSecondaryContainer">@color/tan_dark</item>
-        <item name="colorOnSecondaryContainer">@color/tan_light</item>
+        <item name="colorSecondary">@color/md_theme_secondary</item>
+        <item name="colorOnSecondary">@color/md_theme_onSecondary</item>
+        <item name="colorSecondaryContainer">@color/md_theme_secondaryContainer</item>
+        <item name="colorOnSecondaryContainer">@color/md_theme_onSecondaryContainer</item>
 
-        <!-- Tertiary brand color (for action cards) -->
-        <item name="colorTertiaryContainer">#FF1E3A5F</item>
-        <item name="colorOnTertiaryContainer">@color/blue_light</item>
+        <!-- Tertiary brand color -->
+        <item name="colorTertiary">@color/md_theme_tertiary</item>
+        <item name="colorOnTertiary">@color/md_theme_onTertiary</item>
+        <item name="colorTertiaryContainer">@color/md_theme_tertiaryContainer</item>
+        <item name="colorOnTertiaryContainer">@color/md_theme_onTertiaryContainer</item>
 
-        <!-- Surface colors (backgrounds for cards, dialogs, etc.) -->
-        <item name="colorSurface">#FF1E1E1E</item>
-        <item name="colorOnSurface">@color/blue_lighter</item>
-        <item name="colorSurfaceVariant">#FF2E2E2E</item>
-        <item name="colorOnSurfaceVariant">@color/blue_light</item>
+        <!-- Error colors -->
+        <item name="colorError">@color/md_theme_error</item>
+        <item name="colorOnError">@color/md_theme_onError</item>
+        <item name="colorErrorContainer">@color/md_theme_errorContainer</item>
+        <item name="colorOnErrorContainer">@color/md_theme_onErrorContainer</item>
 
-        <!-- Background color (main screen background) -->
-        <item name="android:colorBackground">@color/blue_darkest</item>
-        <item name="colorOnBackground">@color/blue_lighter</item>
+        <!-- Background color -->
+        <item name="android:colorBackground">@color/md_theme_background</item>
+        <item name="colorOnBackground">@color/md_theme_onBackground</item>
 
-        <!-- Status bar -->
-        <item name="android:statusBarColor">@color/black</item>
-        <item name="android:windowLightStatusBar">false</item>
+        <!-- Surface colors -->
+        <item name="colorSurface">@color/md_theme_surface</item>
+        <item name="colorOnSurface">@color/md_theme_onSurface</item>
+        <item name="colorSurfaceVariant">@color/md_theme_surfaceVariant</item>
+        <item name="colorOnSurfaceVariant">@color/md_theme_onSurfaceVariant</item>
+        <item name="colorSurfaceDim">@color/md_theme_surfaceDim</item>
+        <item name="colorSurfaceBright">@color/md_theme_surfaceBright</item>
+        <item name="colorSurfaceContainerLowest">@color/md_theme_surfaceContainerLowest</item>
+        <item name="colorSurfaceContainerLow">@color/md_theme_surfaceContainerLow</item>
+        <item name="colorSurfaceContainer">@color/md_theme_surfaceContainer</item>
+        <item name="colorSurfaceContainerHigh">@color/md_theme_surfaceContainerHigh</item>
+        <item name="colorSurfaceContainerHighest">@color/md_theme_surfaceContainerHighest</item>
 
-        <!-- Navigation bar -->
-        <item name="android:navigationBarColor">@color/black</item>
-        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">false</item>
+        <!-- Outline colors -->
+        <item name="colorOutline">@color/md_theme_outline</item>
+        <item name="colorOutlineVariant">@color/md_theme_outlineVariant</item>
 
-        <!-- Material 3 shape theme -->
-        <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.Material3.Corner.Medium</item>
-        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.Material3.Corner.Large</item>
+        <!-- Inverse colors -->
+        <item name="colorSurfaceInverse">@color/md_theme_inverseSurface</item>
+        <item name="colorOnSurfaceInverse">@color/md_theme_inverseOnSurface</item>
+        <item name="colorPrimaryInverse">@color/md_theme_inversePrimary</item>
+
+        <!-- Fixed colors -->
+        <item name="colorPrimaryFixed">@color/md_theme_primaryFixed</item>
+        <item name="colorOnPrimaryFixed">@color/md_theme_onPrimaryFixed</item>
+        <item name="colorPrimaryFixedDim">@color/md_theme_primaryFixedDim</item>
+        <item name="colorOnPrimaryFixedVariant">@color/md_theme_onPrimaryFixedVariant</item>
+        <item name="colorSecondaryFixed">@color/md_theme_secondaryFixed</item>
+        <item name="colorOnSecondaryFixed">@color/md_theme_onSecondaryFixed</item>
+        <item name="colorSecondaryFixedDim">@color/md_theme_secondaryFixedDim</item>
+        <item name="colorOnSecondaryFixedVariant">@color/md_theme_onSecondaryFixedVariant</item>
+        <item name="colorTertiaryFixed">@color/md_theme_tertiaryFixed</item>
+        <item name="colorOnTertiaryFixed">@color/md_theme_onTertiaryFixed</item>
+        <item name="colorTertiaryFixedDim">@color/md_theme_tertiaryFixedDim</item>
+        <item name="colorOnTertiaryFixedVariant">@color/md_theme_onTertiaryFixedVariant</item>
+
+        <!-- Custom highlight colors -->
+        <item name="colorHighlight">@color/colorHighlight</item>
+        <item name="colorOnHighlight">@color/colorOnHighlight</item>
+        <item name="colorHighlightContainer">@color/colorHighlightContainer</item>
+        <item name="colorOnHighlightContainer">@color/colorOnHighlightContainer</item>
     </style>
-
-    <!-- Toolbar Theme - white icons on primary color background -->
-    <style name="ToolbarTheme" parent="ThemeOverlay.Material3.Dark" />
-
-    <!-- Popup Menu Theme - for dark mode, keep it dark -->
-    <style name="PopupMenuTheme" parent="ThemeOverlay.Material3.Dark" />
 </resources>

@@ -15,9 +15,7 @@
             android:layout_height="?attr/actionBarSize"
             android:background="?attr/colorPrimary"
             android:elevation="4dp"
-            app:titleTextColor="?attr/colorOnPrimary"
-            android:theme="@style/ToolbarTheme"
-            app:popupTheme="@style/PopupMenuTheme" />
+            app:titleTextColor="?attr/colorOnPrimary" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <FrameLayout

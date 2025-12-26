@@ -16,9 +16,7 @@
             android:background="?attr/colorPrimary"
             android:elevation="4dp"
             app:titleTextColor="?attr/colorOnPrimary"
-            app:navigationIcon="?attr/homeAsUpIndicator"
-            android:theme="@style/ToolbarTheme"
-            app:popupTheme="@style/PopupMenuTheme" />
+            app:navigationIcon="?attr/homeAsUpIndicator" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.core.widget.NestedScrollView

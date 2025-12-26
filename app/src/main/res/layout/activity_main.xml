@@ -20,9 +20,7 @@
             android:elevation="4dp"
             app:logo="@drawable/papertap_logotype"
             app:logoAdjustViewBounds="true"
-            app:titleTextColor="?attr/colorOnPrimary"
-            android:theme="@style/ToolbarTheme"
-            app:popupTheme="@style/PopupMenuTheme" />
+            app:titleTextColor="?attr/colorOnPrimary" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <ScrollView
