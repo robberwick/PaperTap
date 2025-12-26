@@ -1,12 +1,16 @@
 package com.robberwick.papertap
 
 import android.content.Intent
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -128,6 +132,9 @@ class TicketListActivity : AppCompatActivity() {
     }
 
     private fun setupSwipeToDelete() {
+        val deleteIcon = ContextCompat.getDrawable(this, android.R.drawable.ic_menu_delete)
+        val background = ColorDrawable(ContextCompat.getColor(this, android.R.color.holo_red_dark))
+
         val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
             0, ItemTouchHelper.LEFT
         ) {
@@ -137,6 +144,47 @@ class TicketListActivity : AppCompatActivity() {
                 target: RecyclerView.ViewHolder
             ): Boolean {
                 return false
+            }
+
+            override fun getSwipeThreshold(viewHolder: RecyclerView.ViewHolder): Float {
+                // Require 50% swipe to trigger delete
+                return 0.5f
+            }
+
+            override fun onChildDraw(
+                c: Canvas,
+                recyclerView: RecyclerView,
+                viewHolder: RecyclerView.ViewHolder,
+                dX: Float,
+                dY: Float,
+                actionState: Int,
+                isCurrentlyActive: Boolean
+            ) {
+                val itemView = viewHolder.itemView
+                val iconMargin = (itemView.height - deleteIcon!!.intrinsicHeight) / 2
+                val iconTop = itemView.top + (itemView.height - deleteIcon.intrinsicHeight) / 2
+                val iconBottom = iconTop + deleteIcon.intrinsicHeight
+
+                if (dX < 0) { // Swiping to the left
+                    val iconLeft = itemView.right - iconMargin - deleteIcon.intrinsicWidth
+                    val iconRight = itemView.right - iconMargin
+                    deleteIcon.setBounds(iconLeft, iconTop, iconRight, iconBottom)
+
+                    background.setBounds(
+                        itemView.right + dX.toInt(),
+                        itemView.top,
+                        itemView.right,
+                        itemView.bottom
+                    )
+                } else { // No swipe
+                    background.setBounds(0, 0, 0, 0)
+                    deleteIcon.setBounds(0, 0, 0, 0)
+                }
+
+                background.draw(c)
+                deleteIcon.draw(c)
+
+                super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive)
             }
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {

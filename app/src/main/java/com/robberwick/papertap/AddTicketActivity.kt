@@ -285,6 +285,23 @@ class AddTicketActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
+                // Check for duplicate ticket
+                val existingTicket = withContext(Dispatchers.IO) {
+                    ticketRepository.checkForDuplicate(extractedTicketData)
+                }
+
+                if (existingTicket != null) {
+                    // Duplicate found - show message and close
+                    val message = if (extractedTicketData != null) {
+                        "This ticket is already in your collection"
+                    } else {
+                        "This QR code has already been added"
+                    }
+                    Toast.makeText(this@AddTicketActivity, message, Toast.LENGTH_LONG).show()
+                    finish()
+                    return@launch
+                }
+
                 // Create ticket entity (temporarily with placeholder path)
                 val ticketEntity = TicketEntity.fromTicketData(
                     extractedTicketData,

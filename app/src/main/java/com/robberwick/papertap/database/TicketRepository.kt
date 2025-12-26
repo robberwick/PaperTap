@@ -111,4 +111,25 @@ class TicketRepository(context: Context) {
         val tickets = ticketDao.getAllTicketsSync()
         return tickets.firstOrNull()
     }
+
+    /**
+     * Check if a duplicate ticket exists
+     * Returns the existing ticket if found, null otherwise
+     */
+    suspend fun checkForDuplicate(ticketData: TicketData?): TicketEntity? {
+        // First try exact JSON match
+        ticketData?.toJson()?.let { jsonString ->
+            val exactMatch = ticketDao.findDuplicateByTicketData(jsonString)
+            if (exactMatch != null) {
+                return exactMatch
+            }
+        }
+
+        // Then check by reference + origin + destination
+        return ticketDao.findDuplicate(
+            reference = ticketData?.ticketReference,
+            originStation = ticketData?.originStation,
+            destinationStation = ticketData?.destinationStation
+        )
+    }
 }
