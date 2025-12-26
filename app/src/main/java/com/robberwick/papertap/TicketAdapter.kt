@@ -1,5 +1,6 @@
 package com.robberwick.papertap
 
+import android.text.format.DateUtils
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -31,10 +32,32 @@ class TicketAdapter(
     class TicketViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val dateTimeText: TextView = itemView.findViewById(R.id.ticketDateTime)
         private val journeyText: TextView = itemView.findViewById(R.id.ticketJourney)
+        private val usageInfoText: TextView = itemView.findViewById(R.id.usageInfo)
 
         fun bind(ticket: TicketEntity, onTicketClick: (TicketEntity) -> Unit) {
             dateTimeText.text = ticket.dateTime
             journeyText.text = ticket.journeySummary
+
+            // Show usage information if ticket has been flashed
+            if (ticket.lastFlashedAt != null && ticket.flashCount > 0) {
+                val relativeTime = DateUtils.getRelativeTimeSpanString(
+                    ticket.lastFlashedAt,
+                    System.currentTimeMillis(),
+                    DateUtils.MINUTE_IN_MILLIS,
+                    DateUtils.FORMAT_ABBREV_RELATIVE
+                )
+
+                val usageText = if (ticket.flashCount == 1) {
+                    "Last used $relativeTime"
+                } else {
+                    "Used ${ticket.flashCount} times • Last used $relativeTime"
+                }
+
+                usageInfoText.text = usageText
+                usageInfoText.visibility = View.VISIBLE
+            } else {
+                usageInfoText.visibility = View.GONE
+            }
 
             itemView.setOnClickListener {
                 onTicketClick(ticket)

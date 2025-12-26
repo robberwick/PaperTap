@@ -347,6 +347,16 @@ class NfcFlasher : AppCompatActivity() {
                                     )
                                 } else {
                                     playSuccessSound()
+
+                                    // Record successful flash event
+                                    mTicketEntity?.let { ticket ->
+                                        lifecycleScope.launch {
+                                            withContext(Dispatchers.IO) {
+                                                ticketRepository.recordFlashEvent(ticket.id)
+                                            }
+                                        }
+                                    }
+
                                     toast = Toast.makeText(
                                         applicationContext,
                                         "Success! Flashed display!",

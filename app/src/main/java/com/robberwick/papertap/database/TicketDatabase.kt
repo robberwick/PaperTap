@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [TicketEntity::class], version = 2, exportSchema = false)
+@Database(entities = [TicketEntity::class], version = 3, exportSchema = false)
 abstract class TicketDatabase : RoomDatabase() {
     abstract fun ticketDao(): TicketDao
 
@@ -23,6 +23,16 @@ abstract class TicketDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Add usage tracking columns
+                db.execSQL("ALTER TABLE tickets ADD COLUMN lastFlashedAt INTEGER")
+                db.execSQL("ALTER TABLE tickets ADD COLUMN flashCount INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE tickets ADD COLUMN flashHistory TEXT")
+                db.execSQL("ALTER TABLE tickets ADD COLUMN isFavorite INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         fun getDatabase(context: Context): TicketDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -30,7 +40,7 @@ abstract class TicketDatabase : RoomDatabase() {
                     TicketDatabase::class.java,
                     "ticket_database"
                 )
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .build()
                 INSTANCE = instance
                 instance

@@ -22,7 +22,13 @@ data class TicketEntity(
 
     // Store origin and destination separately for duplicate detection
     val originStation: String? = null,
-    val destinationStation: String? = null
+    val destinationStation: String? = null,
+
+    // Usage tracking metrics
+    val lastFlashedAt: Long? = null,
+    val flashCount: Int = 0,
+    val flashHistory: String? = null, // JSON array of timestamps
+    val isFavorite: Boolean = false
 ) {
     companion object {
         fun fromTicketData(

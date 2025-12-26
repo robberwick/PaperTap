@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.LiveData
 import com.robberwick.papertap.BarcodeData
 import com.robberwick.papertap.TicketData
+import org.json.JSONArray
 import java.io.File
 
 class TicketRepository(context: Context) {
@@ -131,5 +132,42 @@ class TicketRepository(context: Context) {
             originStation = ticketData?.originStation,
             destinationStation = ticketData?.destinationStation
         )
+    }
+
+    /**
+     * Record a successful flash event for a ticket
+     * Updates: lastFlashedAt, flashCount, and flashHistory
+     */
+    suspend fun recordFlashEvent(ticketId: Long) {
+        val ticket = ticketDao.getById(ticketId) ?: return
+        val timestamp = System.currentTimeMillis()
+
+        // Parse existing flash history or create new array
+        val historyArray = try {
+            ticket.flashHistory?.let { JSONArray(it) } ?: JSONArray()
+        } catch (e: Exception) {
+            JSONArray()
+        }
+
+        // Add new timestamp
+        historyArray.put(timestamp)
+
+        // Update ticket with new metrics
+        val updatedTicket = ticket.copy(
+            lastFlashedAt = timestamp,
+            flashCount = ticket.flashCount + 1,
+            flashHistory = historyArray.toString()
+        )
+
+        ticketDao.update(updatedTicket)
+    }
+
+    /**
+     * Toggle favorite status for a ticket
+     */
+    suspend fun toggleFavorite(ticketId: Long) {
+        val ticket = ticketDao.getById(ticketId) ?: return
+        val updatedTicket = ticket.copy(isFavorite = !ticket.isFavorite)
+        ticketDao.update(updatedTicket)
     }
 }

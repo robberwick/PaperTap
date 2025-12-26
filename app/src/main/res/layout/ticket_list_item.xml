@@ -35,6 +35,18 @@
             android:layout_marginTop="4dp"
             app:layout_constraintTop_toBottomOf="@id/ticketDateTime"
             app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/nfcIcon" />
+
+        <TextView
+            android:id="@+id/usageInfo"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:textSize="12sp"
+            android:textColor="?android:attr/textColorSecondary"
+            android:layout_marginTop="4dp"
+            android:visibility="gone"
+            app:layout_constraintTop_toBottomOf="@id/ticketJourney"
+            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toStartOf="@id/nfcIcon"
             app:layout_constraintBottom_toBottomOf="parent" />
 
