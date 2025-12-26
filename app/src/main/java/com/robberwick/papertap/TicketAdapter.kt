@@ -1,5 +1,6 @@
 package com.robberwick.papertap
 
+import android.content.res.ColorStateList
 import android.text.format.DateUtils
 import android.view.LayoutInflater
 import android.view.View
@@ -8,6 +9,8 @@ import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.card.MaterialCardView
+import com.google.android.material.color.MaterialColors
 import com.robberwick.papertap.database.TicketEntity
 
 class TicketAdapter(
@@ -22,7 +25,15 @@ class TicketAdapter(
 
     override fun onBindViewHolder(holder: TicketViewHolder, position: Int) {
         val ticket = getItem(position)
-        holder.bind(ticket, onTicketClick)
+
+        // Find the most recently flashed ticket
+        val mostRecentTicket = currentList
+            .filter { it.lastFlashedAt != null }
+            .maxByOrNull { it.lastFlashedAt!! }
+
+        val isMostRecent = mostRecentTicket != null && ticket.id == mostRecentTicket.id
+
+        holder.bind(ticket, isMostRecent, onTicketClick)
     }
 
     fun getTicketAt(position: Int): TicketEntity {
@@ -30,22 +41,45 @@ class TicketAdapter(
     }
 
     class TicketViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val cardView: MaterialCardView = itemView as MaterialCardView
         private val dateTimeText: TextView = itemView.findViewById(R.id.ticketDateTime)
         private val journeyText: TextView = itemView.findViewById(R.id.ticketJourney)
         private val usageInfoText: TextView = itemView.findViewById(R.id.usageInfo)
 
-        fun bind(ticket: TicketEntity, onTicketClick: (TicketEntity) -> Unit) {
+        fun bind(ticket: TicketEntity, isMostRecent: Boolean, onTicketClick: (TicketEntity) -> Unit) {
             dateTimeText.text = ticket.dateTime
             journeyText.text = ticket.journeySummary
 
+            // Apply subtle background tint for most recently flashed ticket
+            if (isMostRecent) {
+                val primaryContainer = MaterialColors.getColor(
+                    itemView,
+                    com.google.android.material.R.attr.colorPrimaryContainer
+                )
+                cardView.setCardBackgroundColor(ColorStateList.valueOf(primaryContainer))
+            } else {
+                val surface = MaterialColors.getColor(
+                    itemView,
+                    com.google.android.material.R.attr.colorSurface
+                )
+                cardView.setCardBackgroundColor(ColorStateList.valueOf(surface))
+            }
+
             // Show usage information if ticket has been flashed
             if (ticket.lastFlashedAt != null && ticket.flashCount > 0) {
-                val relativeTime = DateUtils.getRelativeTimeSpanString(
-                    ticket.lastFlashedAt,
-                    System.currentTimeMillis(),
-                    DateUtils.MINUTE_IN_MILLIS,
-                    DateUtils.FORMAT_ABBREV_RELATIVE
-                )
+                val currentTime = System.currentTimeMillis()
+                val timeDiffSeconds = (currentTime - ticket.lastFlashedAt) / 1000
+
+                val relativeTime = if (timeDiffSeconds < 60) {
+                    "just now"
+                } else {
+                    DateUtils.getRelativeTimeSpanString(
+                        ticket.lastFlashedAt,
+                        currentTime,
+                        DateUtils.MINUTE_IN_MILLIS,
+                        DateUtils.FORMAT_ABBREV_RELATIVE
+                    )
+                }
 
                 val usageText = if (ticket.flashCount == 1) {
                     "Last used $relativeTime"
