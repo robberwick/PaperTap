@@ -43,6 +43,7 @@ class AddTicketActivity : AppCompatActivity() {
     private var extractedTicketData: TicketData? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        android.util.Log.d("AddTicketActivity", "onCreate - Activity starting")
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_add_ticket)
 
@@ -65,17 +66,33 @@ class AddTicketActivity : AppCompatActivity() {
 
         // Get document URI from intent
         val documentUriString = intent.getStringExtra("DOCUMENT_URI")
+        android.util.Log.d("AddTicketActivity", "onCreate - DOCUMENT_URI: $documentUriString")
         if (documentUriString != null) {
             val uri = Uri.parse(documentUriString)
+            android.util.Log.d("AddTicketActivity", "onCreate - Parsed URI: $uri")
             processDocument(uri)
         } else {
+            android.util.Log.e("AddTicketActivity", "onCreate - No DOCUMENT_URI provided!")
             Toast.makeText(this, "No document provided", Toast.LENGTH_SHORT).show()
             finish()
         }
     }
 
     private fun processDocument(uri: Uri) {
+        android.util.Log.d("AddTicketActivity", "processDocument - URI: $uri")
+        android.util.Log.d("AddTicketActivity", "processDocument - URI scheme: ${uri.scheme}")
+
+        // Check if this is an HTTP/HTTPS URL (shared from Firefox)
+        if (uri.scheme == "http" || uri.scheme == "https") {
+            android.util.Log.d("AddTicketActivity", "Detected HTTP/HTTPS URL, downloading...")
+            Toast.makeText(this, "Downloading ticket...", Toast.LENGTH_SHORT).show()
+            downloadAndProcessPdf(uri)
+            return
+        }
+
+        // Handle local file URIs
         val mimeType = contentResolver.getType(uri)
+        android.util.Log.d("AddTicketActivity", "processDocument - MIME type: $mimeType")
         Toast.makeText(this, "Processing document...", Toast.LENGTH_SHORT).show()
 
         lifecycleScope.launch {
@@ -108,6 +125,70 @@ class AddTicketActivity : AppCompatActivity() {
                 Toast.makeText(
                     this@AddTicketActivity,
                     "Error processing document: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+                finish()
+            }
+        }
+    }
+
+    private fun downloadAndProcessPdf(url: Uri) {
+        lifecycleScope.launch {
+            try {
+                val tempFile = withContext(Dispatchers.IO) {
+                    // Create a temporary file for the downloaded PDF
+                    val tempFile = File.createTempFile("downloaded_ticket", ".pdf", cacheDir)
+                    android.util.Log.d("AddTicketActivity", "Downloading to: ${tempFile.absolutePath}")
+
+                    // Download the PDF
+                    val connection = java.net.URL(url.toString()).openConnection() as java.net.HttpURLConnection
+                    connection.connect()
+
+                    if (connection.responseCode != java.net.HttpURLConnection.HTTP_OK) {
+                        throw Exception("Server returned HTTP ${connection.responseCode}")
+                    }
+
+                    connection.inputStream.use { input ->
+                        tempFile.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+
+                    android.util.Log.d("AddTicketActivity", "Download complete, file size: ${tempFile.length()} bytes")
+                    tempFile
+                }
+
+                // Convert to URI and process as PDF
+                val fileUri = Uri.fromFile(tempFile)
+                android.util.Log.d("AddTicketActivity", "Processing downloaded PDF: $fileUri")
+                Toast.makeText(this@AddTicketActivity, "Processing ticket...", Toast.LENGTH_SHORT).show()
+
+                val result = withContext(Dispatchers.IO) {
+                    processPdf(fileUri)
+                }
+
+                // Clean up temp file
+                tempFile.delete()
+
+                if (result != null) {
+                    val (qrBitmap, barcodeData) = result
+                    extractedQrBitmap = qrBitmap
+                    extractedTicketData = barcodeData.ticketData
+                    displayPreview(qrBitmap, barcodeData.ticketData)
+                } else {
+                    Toast.makeText(
+                        this@AddTicketActivity,
+                        "No QR code found in ticket",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    finish()
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("AddTicketActivity", "Error downloading/processing PDF", e)
+                e.printStackTrace()
+                Toast.makeText(
+                    this@AddTicketActivity,
+                    "Error downloading ticket: ${e.message}",
                     Toast.LENGTH_LONG
                 ).show()
                 finish()

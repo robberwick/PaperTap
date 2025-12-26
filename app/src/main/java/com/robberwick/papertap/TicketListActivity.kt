@@ -83,6 +83,8 @@ class TicketListActivity : AppCompatActivity() {
         }
 
         // Handle share intents
+        android.util.Log.d("TicketListActivity", "onCreate - About to handle incoming intent")
+        android.util.Log.d("TicketListActivity", "onCreate - Intent action: ${intent.action}")
         handleIncomingIntent(intent)
     }
 
@@ -92,15 +94,52 @@ class TicketListActivity : AppCompatActivity() {
     }
 
     private fun handleIncomingIntent(intent: Intent) {
+        android.util.Log.d("TicketListActivity", "handleIncomingIntent - action: ${intent.action}")
+        android.util.Log.d("TicketListActivity", "handleIncomingIntent - type: ${intent.type}")
+        android.util.Log.d("TicketListActivity", "handleIncomingIntent - data: ${intent.data}")
+        android.util.Log.d("TicketListActivity", "handleIncomingIntent - extras: ${intent.extras?.keySet()?.joinToString()}")
+
         when (intent.action) {
             Intent.ACTION_SEND -> {
-                val uri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+                // Try EXTRA_STREAM first (standard for file sharing)
+                var uri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+                android.util.Log.d("TicketListActivity", "EXTRA_STREAM uri: $uri")
+
+                // Fallback: Try intent.data (some apps use this)
+                if (uri == null) {
+                    uri = intent.data
+                    android.util.Log.d("TicketListActivity", "Fallback to intent.data: $uri")
+                }
+
+                // Fallback: Try EXTRA_TEXT (might contain a URI string)
+                if (uri == null) {
+                    val text = intent.getStringExtra(Intent.EXTRA_TEXT)
+                    android.util.Log.d("TicketListActivity", "EXTRA_TEXT: $text")
+                    if (text != null) {
+                        try {
+                            uri = Uri.parse(text)
+                            android.util.Log.d("TicketListActivity", "Parsed URI from EXTRA_TEXT: $uri")
+                        } catch (e: Exception) {
+                            android.util.Log.e("TicketListActivity", "Failed to parse URI from EXTRA_TEXT", e)
+                        }
+                    }
+                }
+
                 if (uri != null) {
+                    android.util.Log.d("TicketListActivity", "Navigating to AddTicket with URI: $uri")
                     navigateToAddTicket(uri)
+                } else {
+                    android.util.Log.e("TicketListActivity", "No URI found in SEND intent!")
+                    android.widget.Toast.makeText(
+                        this,
+                        "Could not access the shared file. Please try again.",
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
                 }
             }
             Intent.ACTION_VIEW -> {
                 intent.data?.let { uri ->
+                    android.util.Log.d("TicketListActivity", "ACTION_VIEW with URI: $uri")
                     navigateToAddTicket(uri)
                 }
             }
@@ -126,9 +165,13 @@ class TicketListActivity : AppCompatActivity() {
     }
 
     private fun navigateToAddTicket(uri: Uri) {
+        android.util.Log.d("TicketListActivity", "navigateToAddTicket - Creating intent for AddTicketActivity")
+        android.util.Log.d("TicketListActivity", "navigateToAddTicket - URI: $uri")
         val intent = Intent(this, AddTicketActivity::class.java)
         intent.putExtra("DOCUMENT_URI", uri.toString())
+        android.util.Log.d("TicketListActivity", "navigateToAddTicket - Starting AddTicketActivity")
         startActivity(intent)
+        android.util.Log.d("TicketListActivity", "navigateToAddTicket - AddTicketActivity started")
     }
 
     private fun setupSwipeToDelete() {
