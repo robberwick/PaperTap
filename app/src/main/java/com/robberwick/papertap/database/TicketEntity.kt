@@ -72,4 +72,12 @@ data class TicketEntity(
     fun getTicketData(): TicketData? {
         return ticketDataJson?.let { TicketData.fromJson(it) }
     }
+
+    /**
+     * Returns the ticket reference formatted for UI display with "TR" prefix.
+     * Matches the format used on printed rail tickets (e.g., "TRABC123456789").
+     */
+    fun getFormattedReference(): String? {
+        return reference?.let { "TR$it" }
+    }
 }

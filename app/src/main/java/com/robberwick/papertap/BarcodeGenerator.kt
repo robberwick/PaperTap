@@ -175,10 +175,10 @@ object BarcodeGenerator {
         val barcodeY = edgePadding.toFloat()
         canvas.drawBitmap(barcode, barcodeX, barcodeY, null)
 
-        // Draw the text below the barcode
+        // Draw the text below the barcode with TR prefix
         val textX = width / 2f
         val textY = barcodeY + barcodeSize + spacing + textHeight.toFloat()
-        canvas.drawText(ticketReference, textX, textY, paint)
+        canvas.drawText("TR$ticketReference", textX, textY, paint)
 
         // Clean up
         barcode.recycle()

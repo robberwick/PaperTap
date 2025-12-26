@@ -618,8 +618,9 @@ class NfcFlasher : AppCompatActivity() {
             ticketType.visibility = android.view.View.GONE
         }
 
-        if (ticket.reference != null) {
-            reference.text = "Ref: ${ticket.reference}"
+        val formattedRef = ticket.getFormattedReference()
+        if (formattedRef != null) {
+            reference.text = formattedRef
             reference.visibility = android.view.View.VISIBLE
         } else {
             reference.visibility = android.view.View.GONE

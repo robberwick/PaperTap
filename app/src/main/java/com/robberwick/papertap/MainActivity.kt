@@ -539,8 +539,9 @@ class MainActivity : AppCompatActivity() {
                     }
 
                     // Ticket reference
-                    if (ticketData.ticketReference != null) {
-                        ticketReference.text = "Ref: ${ticketData.ticketReference}"
+                    val formattedRef = ticketData.getFormattedReference()
+                    if (formattedRef != null) {
+                        ticketReference.text = formattedRef
                         ticketReference.visibility = android.view.View.VISIBLE
                     } else {
                         ticketReference.visibility = android.view.View.GONE

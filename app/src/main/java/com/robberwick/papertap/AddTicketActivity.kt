@@ -341,8 +341,9 @@ class AddTicketActivity : AppCompatActivity() {
             }
 
             // Ticket reference
-            if (ticketData.ticketReference != null) {
-                ticketReference.text = "Ref: ${ticketData.ticketReference}"
+            val formattedRef = ticketData.getFormattedReference()
+            if (formattedRef != null) {
+                ticketReference.text = formattedRef
                 ticketReference.visibility = View.VISIBLE
             } else {
                 ticketReference.visibility = View.GONE
