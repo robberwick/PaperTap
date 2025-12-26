@@ -60,11 +60,17 @@ class NfcFlasher : AppCompatActivity() {
                     activityIndicator?.visibility = android.view.View.VISIBLE
                     nfcIcon?.visibility = android.view.View.GONE
                     actionText?.text = "Writing ticket"
+
+                    // Keep screen on during flashing to prevent timeout
+                    window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                 } else {
                     // Show NFC icon and "Hold to back of display" text
                     activityIndicator?.visibility = android.view.View.GONE
                     nfcIcon?.visibility = android.view.View.VISIBLE
                     actionText?.text = "Hold to back of display"
+
+                    // Allow screen to timeout again when not flashing
+                    window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                 }
             }
 
