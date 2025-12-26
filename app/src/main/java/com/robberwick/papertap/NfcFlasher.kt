@@ -49,26 +49,12 @@ class NfcFlasher : AppCompatActivity() {
         set(isFlashing) {
             field = isFlashing
 
-            // Update action card to show progress or instruction
+            // Manage screen wake lock
             runOnUiThread {
-                val activityIndicator = findViewById<android.widget.ProgressBar>(R.id.activityIndicator)
-                val nfcIcon = findViewById<android.widget.ImageView>(R.id.nfcIcon)
-                val actionText = findViewById<android.widget.TextView>(R.id.actionText)
-
                 if (isFlashing) {
-                    // Show spinner and "Writing ticket" text
-                    activityIndicator?.visibility = android.view.View.VISIBLE
-                    nfcIcon?.visibility = android.view.View.GONE
-                    actionText?.text = "Writing ticket"
-
                     // Keep screen on during flashing to prevent timeout
                     window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                 } else {
-                    // Show NFC icon and "Hold to back of display" text
-                    activityIndicator?.visibility = android.view.View.GONE
-                    nfcIcon?.visibility = android.view.View.VISIBLE
-                    actionText?.text = "Hold to back of display"
-
                     // Allow screen to timeout again when not flashing
                     window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                 }

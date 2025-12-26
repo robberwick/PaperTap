@@ -133,59 +133,6 @@
                     app:srcCompat="@android:drawable/stat_sys_warning" />
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Action card - instructions/progress -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/actionCard"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:layout_marginEnd="16dp"
-                android:layout_marginTop="24dp"
-                app:cardBackgroundColor="?attr/colorTertiaryContainer"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp"
-                app:strokeWidth="0dp"
-                app:layout_constraintLeft_toLeftOf="parent"
-                app:layout_constraintRight_toRightOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/previewImageWrapper">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:padding="16dp">
-
-                    <!-- Activity indicator - shown when writing -->
-                    <ProgressBar
-                        android:id="@+id/activityIndicator"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:indeterminate="true"
-                        android:visibility="gone"
-                        android:layout_marginEnd="12dp" />
-
-                    <!-- NFC icon - shown when waiting -->
-                    <ImageView
-                        android:id="@+id/nfcIcon"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:layout_marginEnd="12dp"
-                        android:src="@drawable/ic_nfc"
-                        android:tint="?attr/colorOnTertiaryContainer"
-                        android:contentDescription="NFC" />
-
-                    <!-- Status text -->
-                    <TextView
-                        android:id="@+id/actionText"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Hold to back of display"
-                        android:textSize="16sp"
-                        android:textColor="?attr/colorOnTertiaryContainer" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
 
         </androidx.constraintlayout.widget.ConstraintLayout>
     </ScrollView>
