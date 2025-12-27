@@ -44,19 +44,34 @@ import kotlin.math.sin
 class NfcFlasher : AppCompatActivity() {
     private var mTicketEntity: TicketEntity? = null
     private lateinit var ticketRepository: TicketRepository
+    private lateinit var statusText: TextView
+    private lateinit var statusProgressIndicator: com.google.android.material.progressindicator.CircularProgressIndicator
+
     private var mIsFlashing = false
         get() = field
         set(isFlashing) {
             field = isFlashing
 
-            // Manage screen wake lock
+            // Manage screen wake lock and UI updates
             runOnUiThread {
                 if (isFlashing) {
                     // Keep screen on during flashing to prevent timeout
                     window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+                    // Update status UI
+                    if (::statusText.isInitialized) {
+                        statusText.text = getString(R.string.status_writing_ticket)
+                        statusProgressIndicator.visibility = android.view.View.VISIBLE
+                    }
                 } else {
                     // Allow screen to timeout again when not flashing
                     window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+                    // Reset status UI
+                    if (::statusText.isInitialized) {
+                        statusText.text = getString(R.string.status_tap_to_write)
+                        statusProgressIndicator.visibility = android.view.View.GONE
+                    }
                 }
             }
 
@@ -105,6 +120,10 @@ class NfcFlasher : AppCompatActivity() {
 
         // Initialize repository
         ticketRepository = TicketRepository(this)
+
+        // Initialize status UI elements
+        statusText = findViewById(R.id.statusText)
+        statusProgressIndicator = findViewById(R.id.statusProgressIndicator)
 
         /**
          * Load ticket from database
@@ -424,8 +443,9 @@ class NfcFlasher : AppCompatActivity() {
     }
 
     private fun updateProgressBar(updated: Int) {
-        // Progress bar removed - using indeterminate spinner in action card instead
+        // Progress is displayed via indeterminate spinner in status card
         // The spinner is shown/hidden by the mIsFlashing property setter
+        // We ignore the actual progress value and just show a spinner
     }
     
     private fun playStartSound() {

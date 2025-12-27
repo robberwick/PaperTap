@@ -26,6 +26,10 @@
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
 
+    <!-- NFC Flasher Status -->
+    <string name="status_tap_to_write">Tap NFC display to phone to write ticket</string>
+    <string name="status_writing_ticket">Writing ticket…</string>
+
     <!-- Screen sizes array for preferences -->
     <string-array name="screen_sizes">
         <item>2.13"</item>
