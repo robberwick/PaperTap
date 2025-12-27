@@ -70,5 +70,9 @@
         <item name="colorOnHighlight">@color/colorOnHighlight</item>
         <item name="colorHighlightContainer">@color/colorHighlightContainer</item>
         <item name="colorOnHighlightContainer">@color/colorOnHighlightContainer</item>
+
+        <!-- App bar colors (light mode: use primary color) -->
+        <item name="colorAppBar">@color/md_theme_primary</item>
+        <item name="colorOnAppBar">@color/md_theme_onPrimary</item>
     </style>
 </resources>

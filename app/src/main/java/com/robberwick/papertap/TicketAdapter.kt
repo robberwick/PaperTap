@@ -50,19 +50,37 @@ class TicketAdapter(
             dateTimeText.text = ticket.dateTime
             journeyText.text = ticket.journeySummary
 
-            // Apply subtle background tint for most recently flashed ticket
+            // Apply background and text colors for most recently flashed ticket
             if (isMostRecent) {
                 val primaryContainer = MaterialColors.getColor(
                     itemView,
                     com.google.android.material.R.attr.colorPrimaryContainer
                 )
+                val onPrimaryContainer = MaterialColors.getColor(
+                    itemView,
+                    com.google.android.material.R.attr.colorOnPrimaryContainer
+                )
                 cardView.setCardBackgroundColor(ColorStateList.valueOf(primaryContainer))
+                dateTimeText.setTextColor(onPrimaryContainer)
+                journeyText.setTextColor(onPrimaryContainer)
+                usageInfoText.setTextColor(onPrimaryContainer)
             } else {
                 val surface = MaterialColors.getColor(
                     itemView,
                     com.google.android.material.R.attr.colorSurface
                 )
+                val onSurface = MaterialColors.getColor(
+                    itemView,
+                    com.google.android.material.R.attr.colorOnSurface
+                )
+                val onSurfaceVariant = MaterialColors.getColor(
+                    itemView,
+                    com.google.android.material.R.attr.colorOnSurfaceVariant
+                )
                 cardView.setCardBackgroundColor(ColorStateList.valueOf(surface))
+                dateTimeText.setTextColor(onSurface)
+                journeyText.setTextColor(onSurface)
+                usageInfoText.setTextColor(onSurfaceVariant)
             }
 
             // Show usage information if ticket has been flashed

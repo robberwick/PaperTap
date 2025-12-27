@@ -4,4 +4,8 @@
     <attr name="colorOnHighlight" format="color" />
     <attr name="colorHighlightContainer" format="color" />
     <attr name="colorOnHighlightContainer" format="color" />
+
+    <!-- App bar colors that adapt to light/dark mode -->
+    <attr name="colorAppBar" format="color" />
+    <attr name="colorOnAppBar" format="color" />
 </resources>
