@@ -50,6 +50,11 @@ class EditTicketActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_edit_ticket)
 
+        // Setup toolbar with back button
+        val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
+        setSupportActionBar(toolbar)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+
         ticketRepository = TicketRepository(this)
 
         // Initialize StationLookup

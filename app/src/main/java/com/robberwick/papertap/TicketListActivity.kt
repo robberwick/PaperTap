@@ -42,6 +42,12 @@ class TicketListActivity : AppCompatActivity() {
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayShowTitleEnabled(false)
 
+        // Tint overflow menu icon to match theme
+        val typedValue = android.util.TypedValue()
+        theme.resolveAttribute(R.attr.colorOnAppBar, typedValue, true)
+        val overflowColor = typedValue.data
+        toolbar.overflowIcon?.setTint(overflowColor)
+
         // Initialize repository
         ticketRepository = TicketRepository(this)
 

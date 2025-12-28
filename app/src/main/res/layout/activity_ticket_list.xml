@@ -13,6 +13,7 @@
             android:layout_height="?attr/actionBarSize"
             android:background="?attr/colorAppBar"
             android:elevation="4dp"
+            app:titleTextColor="?attr/colorOnAppBar"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent">
