@@ -1,21 +1,31 @@
 package com.robberwick.papertap
 
+import android.app.DatePickerDialog
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
+import android.view.View
+import android.widget.ArrayAdapter
+import android.widget.AutoCompleteTextView
 import android.widget.Button
+import android.widget.EditText
 import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.google.android.material.textfield.TextInputEditText
 import com.robberwick.papertap.database.TicketRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import kotlin.coroutines.resume
@@ -27,13 +37,25 @@ class AddTicketActivity : AppCompatActivity() {
     private lateinit var preferences: Preferences
 
     private lateinit var qrCodePreview: ImageView
-    private lateinit var labelInput: TextInputEditText
+    private lateinit var nameValue: TextView
+    private lateinit var dateValue: TextView
+    private lateinit var journeyPlaceholder: TextView
+    private lateinit var journeyDetails: LinearLayout
+    private lateinit var originName: TextView
+    private lateinit var originCode: TextView
+    private lateinit var destinationName: TextView
+    private lateinit var destinationCode: TextView
     private lateinit var cancelButton: Button
     private lateinit var addButton: Button
 
     private var extractedQrBitmap: Bitmap? = null
     private var extractedRawData: String? = null
     private var extractedBarcodeFormat: Int? = null
+
+    private var ticketLabel: String = ""
+    private var selectedOriginStation: Station? = null
+    private var selectedDestinationStation: Station? = null
+    private var selectedTravelDate: Long? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         android.util.Log.d("AddTicketActivity", "onCreate - Activity starting")
@@ -43,11 +65,26 @@ class AddTicketActivity : AppCompatActivity() {
         ticketRepository = TicketRepository(this)
         preferences = Preferences(this)
 
+        // Initialize StationLookup
+        StationLookup.initialize(this)
+
         // Find views
         qrCodePreview = findViewById(R.id.qrCodePreview)
-        labelInput = findViewById(R.id.labelInput)
+        nameValue = findViewById(R.id.nameValue)
+        dateValue = findViewById(R.id.dateValue)
+        journeyPlaceholder = findViewById(R.id.journeyPlaceholder)
+        journeyDetails = findViewById(R.id.journeyDetails)
+        originName = findViewById(R.id.originName)
+        originCode = findViewById(R.id.originCode)
+        destinationName = findViewById(R.id.destinationName)
+        destinationCode = findViewById(R.id.destinationCode)
         cancelButton = findViewById(R.id.cancelButton)
         addButton = findViewById(R.id.addButton)
+
+        // Setup click listeners for tappable rows
+        findViewById<View>(R.id.nameRow).setOnClickListener { showNameDialog() }
+        findViewById<View>(R.id.dateRow).setOnClickListener { showDateDialog() }
+        findViewById<View>(R.id.journeyRow).setOnClickListener { showJourneyDialog() }
 
         // Setup buttons
         cancelButton.setOnClickListener { finish() }
@@ -259,6 +296,110 @@ class AddTicketActivity : AppCompatActivity() {
         qrCodePreview.setImageBitmap(qrBitmap)
     }
 
+    private fun showNameDialog() {
+        val input = EditText(this)
+        input.setText(ticketLabel)
+        input.selectAll()
+        input.setSingleLine(true)
+
+        AlertDialog.Builder(this)
+            .setTitle("Ticket Name")
+            .setView(input)
+            .setPositiveButton("Set") { _, _ ->
+                val newLabel = input.text.toString().trim()
+                ticketLabel = if (newLabel.isEmpty()) generateDefaultLabel() else newLabel
+                nameValue.text = ticketLabel
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showDateDialog() {
+        val calendar = Calendar.getInstance()
+        if (selectedTravelDate != null) {
+            calendar.timeInMillis = selectedTravelDate!!
+        }
+
+        DatePickerDialog(
+            this,
+            { _, year, month, dayOfMonth ->
+                calendar.set(year, month, dayOfMonth)
+                selectedTravelDate = calendar.timeInMillis
+
+                val dateFormat = SimpleDateFormat("d MMM yyyy", Locale.getDefault())
+                dateValue.text = dateFormat.format(calendar.time)
+            },
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        ).show()
+    }
+
+    private fun showJourneyDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_journey, null)
+        val originInput = dialogView.findViewById<AutoCompleteTextView>(R.id.originStationInput)
+        val destInput = dialogView.findViewById<AutoCompleteTextView>(R.id.destinationStationInput)
+
+        // Setup adapters
+        val adapter = StationAdapter(this, StationLookup.getAllStations())
+        originInput.setAdapter(adapter)
+        originInput.threshold = 1
+        destInput.setAdapter(StationAdapter(this, StationLookup.getAllStations()))
+        destInput.threshold = 1
+
+        // Pre-fill if stations already selected
+        selectedOriginStation?.let {  originInput.setText(it.toString(), false) }
+        selectedDestinationStation?.let { destInput.setText(it.toString(), false) }
+
+        var tempOrigin: Station? = selectedOriginStation
+        var tempDest: Station? = selectedDestinationStation
+
+        originInput.setOnItemClickListener { _, _, position, _ ->
+            tempOrigin = adapter.getItem(position)
+        }
+
+        destInput.setOnItemClickListener { _, _, position, _ ->
+            tempDest = (destInput.adapter as StationAdapter).getItem(position)
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Journey")
+            .setView(dialogView)
+            .setPositiveButton("Set") { _, _ ->
+                selectedOriginStation = tempOrigin
+                selectedDestinationStation = tempDest
+                updateJourneyDisplay()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun updateJourneyDisplay() {
+        if (selectedOriginStation != null || selectedDestinationStation != null) {
+            journeyPlaceholder.visibility = View.GONE
+            journeyDetails.visibility = View.VISIBLE
+
+            selectedOriginStation?.let {
+                originName.text = it.name
+                originCode.text = it.code
+            } ?: run {
+                originName.text = ""
+                originCode.text = "?"
+            }
+
+            selectedDestinationStation?.let {
+                destinationName.text = it.name
+                destinationCode.text = it.code
+            } ?: run {
+                destinationName.text = ""
+                destinationCode.text = "?"
+            }
+        } else {
+            journeyPlaceholder.visibility = View.VISIBLE
+            journeyDetails.visibility = View.GONE
+        }
+    }
+
     private fun addTicket() {
         val rawData = extractedRawData
         val barcodeFormat = extractedBarcodeFormat
@@ -268,29 +409,27 @@ class AddTicketActivity : AppCompatActivity() {
             return
         }
 
-        // Get label from input or generate default
-        val label = labelInput.text?.toString()?.trim().let {
-            if (it.isNullOrEmpty()) {
-                generateDefaultLabel()
-            } else {
-                it
-            }
-        }
+        // Use ticketLabel if set, otherwise generate default
+        val label = if (ticketLabel.isEmpty()) generateDefaultLabel() else ticketLabel
 
         lifecycleScope.launch {
             try {
-                // Insert ticket - repository will check for duplicates
                 val ticketId = withContext(Dispatchers.IO) {
-                    ticketRepository.insertTicket(rawData, barcodeFormat, label)
+                    ticketRepository.insertTicket(
+                        rawData = rawData,
+                        format = barcodeFormat,
+                        userLabel = label,
+                        originStationCode = selectedOriginStation?.code,
+                        destinationStationCode = selectedDestinationStation?.code,
+                        travelDate = selectedTravelDate
+                    )
                 }
 
-                // Check if it was a duplicate
                 val ticket = withContext(Dispatchers.IO) {
                     ticketRepository.getById(ticketId)
                 }
 
                 if (ticket != null && ticket.userLabel != label) {
-                    // Duplicate found (label doesn't match what we tried to insert)
                     Toast.makeText(
                         this@AddTicketActivity,
                         "This ticket is already in your collection",
@@ -315,5 +454,53 @@ class AddTicketActivity : AppCompatActivity() {
     private fun generateDefaultLabel(): String {
         val dateFormat = SimpleDateFormat("MMM d, yyyy 'at' h:mm a", Locale.getDefault())
         return "Ticket ${dateFormat.format(Date())}"
+    }
+
+    private class StationAdapter(context: android.content.Context, stations: List<Station>) :
+        ArrayAdapter<Station>(context, android.R.layout.simple_dropdown_item_1line, stations) {
+
+        private val allStations = stations
+        private var filteredStations = stations
+
+        override fun getCount(): Int = filteredStations.size
+
+        override fun getItem(position: Int): Station = filteredStations[position]
+
+        override fun getFilter(): android.widget.Filter {
+            return object : android.widget.Filter() {
+                override fun performFiltering(constraint: CharSequence?): FilterResults {
+                    val results = FilterResults()
+
+                    if (constraint.isNullOrBlank()) {
+                        results.values = allStations
+                        results.count = allStations.size
+                    } else {
+                        val query = constraint.toString().lowercase()
+                        val filtered = allStations.filter { station ->
+                            station.code.lowercase().contains(query) ||
+                            station.name.lowercase().contains(query)
+                        }
+                        results.values = filtered
+                        results.count = filtered.size
+                    }
+
+                    return results
+                }
+
+                @Suppress("UNCHECKED_CAST")
+                override fun publishResults(constraint: CharSequence?, results: FilterResults?) {
+                    filteredStations = (results?.values as? List<Station>) ?: emptyList()
+                    if (results?.count ?: 0 > 0) {
+                        notifyDataSetChanged()
+                    } else {
+                        notifyDataSetInvalidated()
+                    }
+                }
+
+                override fun convertResultToString(resultValue: Any?): CharSequence {
+                    return (resultValue as? Station)?.toString() ?: ""
+                }
+            }
+        }
     }
 }

@@ -51,9 +51,14 @@ class TicketAdapter(
             // Show label as primary text
             journeyText.text = ticket.userLabel
 
-            // Show "Added [date]" as secondary text
-            val dateFormat = java.text.SimpleDateFormat("MMM d, yyyy", java.util.Locale.getDefault())
-            dateTimeText.text = "Added ${dateFormat.format(java.util.Date(ticket.addedAt))}"
+            // Show journey metadata if available, otherwise show "Added [date]"
+            val journeyInfo = buildJourneyInfo(ticket)
+            if (journeyInfo != null) {
+                dateTimeText.text = journeyInfo
+            } else {
+                val dateFormat = java.text.SimpleDateFormat("MMM d, yyyy", java.util.Locale.getDefault())
+                dateTimeText.text = "Added ${dateFormat.format(java.util.Date(ticket.addedAt))}"
+            }
 
             // Apply background and text colors for most recently flashed ticket
             if (isMostRecent) {
@@ -124,6 +129,47 @@ class TicketAdapter(
                 onTicketLongClick?.invoke(ticket)
                 true
             }
+        }
+
+        private fun buildJourneyInfo(ticket: TicketEntity): String? {
+            val hasOrigin = !ticket.originStationCode.isNullOrEmpty()
+            val hasDestination = !ticket.destinationStationCode.isNullOrEmpty()
+            val hasTravelDate = ticket.travelDate != null
+
+            // Build the journey string if we have any metadata
+            if (!hasOrigin && !hasDestination && !hasTravelDate) {
+                return null
+            }
+
+            val parts = mutableListOf<String>()
+
+            // Add origin → destination if available
+            if (hasOrigin || hasDestination) {
+                val originName = ticket.originStationCode?.let {
+                    StationLookup.getStationName(it)
+                }
+                val destName = ticket.destinationStationCode?.let {
+                    StationLookup.getStationName(it)
+                }
+
+                val routePart = when {
+                    hasOrigin && hasDestination ->
+                        "${originName ?: ticket.originStationCode} (${ticket.originStationCode}) → ${destName ?: ticket.destinationStationCode} (${ticket.destinationStationCode})"
+                    hasOrigin ->
+                        "${originName ?: ticket.originStationCode} (${ticket.originStationCode}) → ?"
+                    else ->
+                        "? → ${destName ?: ticket.destinationStationCode} (${ticket.destinationStationCode})"
+                }
+                parts.add(routePart)
+            }
+
+            // Add travel date if available
+            if (hasTravelDate && ticket.travelDate != null) {
+                val dateFormat = java.text.SimpleDateFormat("d MMM yyyy", java.util.Locale.getDefault())
+                parts.add(dateFormat.format(java.util.Date(ticket.travelDate)))
+            }
+
+            return parts.joinToString(" | ")
         }
     }
 

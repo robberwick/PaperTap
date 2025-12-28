@@ -115,6 +115,9 @@ class NfcFlasher : AppCompatActivity() {
         // Initialize repository
         ticketRepository = TicketRepository(this)
 
+        // Initialize StationLookup
+        StationLookup.initialize(this)
+
         // Initialize status UI elements
         statusText = findViewById(R.id.statusText)
         statusProgressIndicator = findViewById(R.id.statusProgressIndicator)
@@ -614,9 +617,55 @@ class NfcFlasher : AppCompatActivity() {
         ticketDetailsCard.visibility = android.view.View.VISIBLE
         labelText.text = ticket.userLabel
 
-        // Format timestamp
-        val dateFormat = java.text.SimpleDateFormat("MMM d, yyyy 'at' h:mm a", java.util.Locale.getDefault())
-        timestampText.text = "Added ${dateFormat.format(java.util.Date(ticket.addedAt))}"
+        // Show journey metadata if available, otherwise show "Added [date]"
+        val journeyInfo = buildJourneyInfo(ticket)
+        if (journeyInfo != null) {
+            timestampText.text = journeyInfo
+        } else {
+            val dateFormat = java.text.SimpleDateFormat("MMM d, yyyy 'at' h:mm a", java.util.Locale.getDefault())
+            timestampText.text = "Added ${dateFormat.format(java.util.Date(ticket.addedAt))}"
+        }
+    }
+
+    private fun buildJourneyInfo(ticket: TicketEntity): String? {
+        val hasOrigin = !ticket.originStationCode.isNullOrEmpty()
+        val hasDestination = !ticket.destinationStationCode.isNullOrEmpty()
+        val hasTravelDate = ticket.travelDate != null
+
+        // Build the journey string if we have any metadata
+        if (!hasOrigin && !hasDestination && !hasTravelDate) {
+            return null
+        }
+
+        val parts = mutableListOf<String>()
+
+        // Add origin → destination if available
+        if (hasOrigin || hasDestination) {
+            val originName = ticket.originStationCode?.let {
+                StationLookup.getStationName(it)
+            }
+            val destName = ticket.destinationStationCode?.let {
+                StationLookup.getStationName(it)
+            }
+
+            val routePart = when {
+                hasOrigin && hasDestination ->
+                    "${originName ?: ticket.originStationCode} (${ticket.originStationCode}) → ${destName ?: ticket.destinationStationCode} (${ticket.destinationStationCode})"
+                hasOrigin ->
+                    "${originName ?: ticket.originStationCode} (${ticket.originStationCode}) → ?"
+                else ->
+                    "? → ${destName ?: ticket.destinationStationCode} (${ticket.destinationStationCode})"
+            }
+            parts.add(routePart)
+        }
+
+        // Add travel date if available
+        if (hasTravelDate && ticket.travelDate != null) {
+            val dateFormat = java.text.SimpleDateFormat("d MMM yyyy", java.util.Locale.getDefault())
+            parts.add(dateFormat.format(java.util.Date(ticket.travelDate)))
+        }
+
+        return parts.joinToString(" | ")
     }
 
 }

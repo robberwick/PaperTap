@@ -57,8 +57,10 @@ class TicketListActivity : AppCompatActivity() {
                 startActivity(intent)
             },
             onTicketLongClick = { ticket ->
-                // Show edit dialog on long press
-                showEditLabelDialog(ticket)
+                // Launch edit activity on long press
+                val intent = Intent(this, EditTicketActivity::class.java)
+                intent.putExtra("TICKET_ID", ticket.id)
+                startActivity(intent)
             }
         )
 

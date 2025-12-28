@@ -50,6 +50,11 @@
             android:name=".AddTicketActivity"
             android:parentActivityName=".TicketListActivity" />
 
+        <!-- Edit Ticket Activity -->
+        <activity
+            android:name=".EditTicketActivity"
+            android:parentActivityName=".TicketListActivity" />
+
         <!-- NFC Flasher Activity -->
         <activity
             android:name=".NfcFlasher"

@@ -33,7 +33,14 @@ class TicketRepository(context: Context) {
      * Insert a ticket with raw barcode data and user label
      * Returns the ID of the inserted ticket, or the ID of an existing duplicate if found
      */
-    suspend fun insertTicket(rawData: String, format: Int, userLabel: String): Long {
+    suspend fun insertTicket(
+        rawData: String,
+        format: Int,
+        userLabel: String,
+        originStationCode: String? = null,
+        destinationStationCode: String? = null,
+        travelDate: Long? = null
+    ): Long {
         // Check for duplicate by raw barcode data
         val existing = ticketDao.findDuplicate(rawData)
         if (existing != null) {
@@ -44,7 +51,10 @@ class TicketRepository(context: Context) {
         val ticket = TicketEntity(
             userLabel = userLabel,
             rawBarcodeData = rawData,
-            barcodeFormat = format
+            barcodeFormat = format,
+            originStationCode = originStationCode,
+            destinationStationCode = destinationStationCode,
+            travelDate = travelDate
         )
         return ticketDao.insert(ticket)
     }

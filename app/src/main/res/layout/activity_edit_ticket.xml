@@ -54,15 +54,16 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp"
-            android:gravity="center_horizontal">
+            android:padding="16dp">
 
-            <ImageView
-                android:id="@+id/qrCodePreview"
-                android:layout_width="200dp"
-                android:layout_height="200dp"
-                android:scaleType="fitCenter"
-                android:contentDescription="QR Code Preview" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Edit Ticket"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:textColor="?android:attr/textColorPrimary"
+                android:paddingBottom="16dp" />
 
             <!-- Name/Label Row -->
             <LinearLayout
@@ -251,11 +252,11 @@
             android:layout_marginEnd="8dp" />
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/addButton"
+            android:id="@+id/saveButton"
             style="@style/Widget.Material3.Button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Add" />
+            android:text="Save" />
 
     </LinearLayout>
 
