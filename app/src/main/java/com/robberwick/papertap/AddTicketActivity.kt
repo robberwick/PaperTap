@@ -465,7 +465,7 @@ class AddTicketActivity : AppCompatActivity() {
     }
 
     private fun addTicketReferenceToImage(qrBitmap: Bitmap, ticketReference: String?): Bitmap {
-        // Reference text is now added during regeneration in NfcFlasher/MainActivity,
+        // Reference text is now added during regeneration in NfcFlasher,
         // not during initial save. This keeps the stored image simple and allows
         // the reference to be toggled on/off without re-importing the ticket.
         return qrBitmap

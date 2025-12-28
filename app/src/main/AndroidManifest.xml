@@ -66,10 +66,6 @@
             android:label="@string/about_title"
             android:parentActivityName=".TicketListActivity" />
 
-        <!-- Legacy MainActivity (kept for backwards compatibility) -->
-        <activity
-            android:name=".MainActivity"
-            android:launchMode="singleTop" />
         <activity android:name="com.canhub.cropper.CropImageActivity"
             android:theme="@style/Base.Theme.AppCompat"/>
     </application>
