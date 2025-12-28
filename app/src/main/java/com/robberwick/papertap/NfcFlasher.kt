@@ -574,14 +574,31 @@ class NfcFlasher : AppCompatActivity() {
         try {
             val preferences = Preferences(this)
             val (screenWidth, screenHeight) = preferences.getScreenSizePixels()
-            val showLabel = preferences.getShowLabelOnBarcode()
-            val label = if (showLabel && ticket.userLabel.isNotEmpty()) ticket.userLabel else null
+
+            // Build list of labels based on settings
+            val labels = mutableListOf<BarcodeLabel>()
+
+            // Add station codes if enabled and available (50% smaller)
+            val showStationCodes = preferences.getShowStationCodesOnBarcode()
+            if (showStationCodes && !ticket.originStationCode.isNullOrEmpty() && !ticket.destinationStationCode.isNullOrEmpty()) {
+                val stationCodesText = "${ticket.originStationCode} → ${ticket.destinationStationCode}"
+                labels.add(BarcodeLabel(stationCodesText, sizeMultiplier = 1.0f))
+                Log.d("NfcFlasher", "Adding station codes to barcode: $stationCodesText (50% size)")
+            }
+
+            // Add travel date if enabled and available (70% smaller)
+            val showTravelDate = preferences.getShowTravelDateOnBarcode()
+            if (showTravelDate && ticket.travelDate != null) {
+                val dateFormat = java.text.SimpleDateFormat("d MMM yyyy", java.util.Locale.getDefault())
+                val dateText = dateFormat.format(java.util.Date(ticket.travelDate))
+                labels.add(BarcodeLabel(dateText, sizeMultiplier = 1.0f))
+                Log.d("NfcFlasher", "Adding travel date to barcode: $dateText (70% smaller)")
+            }
 
             Log.d("NfcFlasher", "loadTicketImage - Regenerating from raw barcode data")
-            Log.d("NfcFlasher", "loadTicketImage - showLabel: $showLabel")
-            Log.d("NfcFlasher", "loadTicketImage - label: $label")
+            Log.d("NfcFlasher", "loadTicketImage - labels: $labels")
 
-            // Always use generateBarcodeWithLabel - it handles null labels correctly
+            // Generate barcode with labels
             this.mBitmap = BarcodeGenerator.generateBarcodeWithLabel(
                 rawData = ticket.rawBarcodeData,
                 format = when (ticket.barcodeFormat) {
@@ -594,7 +611,7 @@ class NfcFlasher : AppCompatActivity() {
                 width = screenWidth,
                 height = screenHeight,
                 edgePadding = preferences.getQrPadding(),
-                label = label  // null if setting is off or label is empty
+                labels = labels
             )
 
             // Display preview

@@ -47,6 +47,8 @@ object PrefKeys {
     var DisplaySize = "Display_Size"
     var QrPadding = "Qr_Padding"
     var ShowLabelOnBarcode = "Show_Label_On_Barcode"
+    var ShowStationCodesOnBarcode = "Show_Station_Codes_On_Barcode"
+    var ShowTravelDateOnBarcode = "Show_Travel_Date_On_Barcode"
 }
 
 object IntentKeys {

@@ -8,6 +8,16 @@ import com.google.zxing.MultiFormatWriter
 import com.google.zxing.common.BitMatrix
 
 /**
+ * Represents a text label with an optional size multiplier for barcode generation.
+ * @param text The text to display
+ * @param sizeMultiplier The font size multiplier relative to base size (default 1.0)
+ */
+data class BarcodeLabel(
+    val text: String,
+    val sizeMultiplier: Float = 1.0f
+)
+
+/**
  * Utility class for generating barcode images from raw data using ZXing.
  */
 object BarcodeGenerator {
@@ -79,7 +89,7 @@ object BarcodeGenerator {
     }
 
     /**
-     * Generates a barcode with optional ticket reference text below it.
+     * Generates a barcode with optional text lines below it.
      * The barcode is scaled to fit within the target dimensions while maintaining aspect ratio,
      * with space reserved for the text at the bottom.
      *
@@ -87,8 +97,8 @@ object BarcodeGenerator {
      * @param format The barcode format (AZTEC, QR_CODE, etc.)
      * @param width The desired final width in pixels
      * @param height The desired final height in pixels
-     * @param padding The padding in pixels around the barcode
-     * @param label Optional label text to add below the barcode
+     * @param edgePadding The padding in pixels around the barcode and text
+     * @param labels List of text labels with size multipliers to add below the barcode (empty list for no labels)
      * @return The generated barcode with optional text, scaled to fit target dimensions
      */
     fun generateBarcodeWithLabel(
@@ -97,19 +107,22 @@ object BarcodeGenerator {
         width: Int,
         height: Int,
         edgePadding: Int = 0,
-        label: String? = null
+        labels: List<BarcodeLabel> = emptyList()
     ): Bitmap {
         android.util.Log.d("BarcodeGenerator", "generateBarcodeWithLabel called")
-        android.util.Log.d("BarcodeGenerator", "  label: '$label'")
+        android.util.Log.d("BarcodeGenerator", "  labels: $labels")
         android.util.Log.d("BarcodeGenerator", "  width: $width, height: $height, edgePadding: $edgePadding")
 
         // Calculate available space after accounting for edge padding on all sides
         val availableWidth = width - (edgePadding * 2)
         val availableHeight = height - (edgePadding * 2)
 
+        // Filter out empty labels
+        val nonEmptyLabels = labels.filter { it.text.isNotEmpty() }
+
         // If no label text, generate plain barcode within padded area
-        if (label.isNullOrEmpty()) {
-            android.util.Log.d("BarcodeGenerator", "  No label, returning plain barcode")
+        if (nonEmptyLabels.isEmpty()) {
+            android.util.Log.d("BarcodeGenerator", "  No labels, returning plain barcode")
 
             // Keep barcode square
             val barcodeSize = minOf(availableWidth, availableHeight)
@@ -129,33 +142,36 @@ object BarcodeGenerator {
             return result
         }
 
-        android.util.Log.d("BarcodeGenerator", "  Adding label to barcode")
+        android.util.Log.d("BarcodeGenerator", "  Adding ${nonEmptyLabels.size} label(s) to barcode")
 
-        // Calculate text size (about 2/15th of the available height, doubled for readability)
-        val textSizePx = (availableHeight / 15f * 2f).coerceAtLeast(24f)
+        // Calculate base text size (optimized for small metadata labels)
+        val baseTextSizePx = (availableHeight / 10f).coerceAtLeast(14f)
 
-        // Create paint for text
-        val paint = android.graphics.Paint().apply {
-            color = Color.BLACK
-            textSize = textSizePx
-            typeface = android.graphics.Typeface.MONOSPACE
-            isAntiAlias = false  // Keep crisp for e-ink
-            textAlign = android.graphics.Paint.Align.CENTER
+        // Calculate spacing (tight spacing to maximize barcode size)
+        val spacing = (availableWidth / 50f).toInt().coerceAtLeast(2)
+
+        // Measure each label's height with its specific size multiplier
+        data class LabelMetrics(val label: BarcodeLabel, val height: Int, val paint: android.graphics.Paint)
+        val labelMetrics = nonEmptyLabels.map { label ->
+            val paint = android.graphics.Paint().apply {
+                color = Color.BLACK
+                textSize = baseTextSizePx * label.sizeMultiplier
+                typeface = android.graphics.Typeface.MONOSPACE
+                isAntiAlias = false  // Keep crisp for e-ink
+                textAlign = android.graphics.Paint.Align.CENTER
+            }
+            val textBounds = android.graphics.Rect()
+            paint.getTextBounds(label.text, 0, label.text.length, textBounds)
+            LabelMetrics(label, textBounds.height(), paint)
         }
 
-        // Measure text dimensions
-        val textBounds = android.graphics.Rect()
-        paint.getTextBounds(label, 0, label.length, textBounds)
-        val textHeight = textBounds.height()
-
-        // Calculate spacing (about 1/20th of available width)
-        val spacing = (availableWidth / 20f).toInt().coerceAtLeast(5)
-
-        // Calculate how much space the text + spacing needs
-        val textAreaHeight = spacing + textHeight + spacing
+        // Calculate total text area height
+        // Each line needs its specific height + spacing below it
+        // Plus one spacing above the first line
+        val totalTextHeight = labelMetrics.sumOf { it.height + spacing } + spacing
 
         // Calculate available space for barcode (within the padded area)
-        val barcodeAvailableHeight = availableHeight - textAreaHeight
+        val barcodeAvailableHeight = availableHeight - totalTextHeight
 
         // CRITICAL: Keep barcode square to maintain aspect ratio for 2D barcodes
         val barcodeSize = minOf(availableWidth, barcodeAvailableHeight)
@@ -175,10 +191,15 @@ object BarcodeGenerator {
         val barcodeY = edgePadding.toFloat()
         canvas.drawBitmap(barcode, barcodeX, barcodeY, null)
 
-        // Draw the label below the barcode
+        // Draw each label below the barcode with its specific size
         val textX = width / 2f
-        val textY = barcodeY + barcodeSize + spacing + textHeight.toFloat()
-        canvas.drawText(label, textX, textY, paint)
+        var currentY = barcodeY + barcodeSize + spacing
+
+        for (metrics in labelMetrics) {
+            currentY += metrics.height.toFloat()
+            canvas.drawText(metrics.label.text, textX, currentY, metrics.paint)
+            currentY += spacing
+        }
 
         // Clean up
         barcode.recycle()

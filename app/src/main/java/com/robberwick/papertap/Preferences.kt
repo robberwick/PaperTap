@@ -85,4 +85,26 @@ class Preferences {
             apply()
         }
     }
+
+    fun getShowStationCodesOnBarcode(): Boolean {
+        return getPreferences().getBoolean(PreferenceKeys.ShowStationCodesOnBarcode, false)
+    }
+
+    fun setShowStationCodesOnBarcode(show: Boolean) {
+        with(getPreferences().edit()) {
+            putBoolean(PreferenceKeys.ShowStationCodesOnBarcode, show)
+            apply()
+        }
+    }
+
+    fun getShowTravelDateOnBarcode(): Boolean {
+        return getPreferences().getBoolean(PreferenceKeys.ShowTravelDateOnBarcode, false)
+    }
+
+    fun setShowTravelDateOnBarcode(show: Boolean) {
+        with(getPreferences().edit()) {
+            putBoolean(PreferenceKeys.ShowTravelDateOnBarcode, show)
+            apply()
+        }
+    }
 }

@@ -19,4 +19,25 @@
 
     </PreferenceCategory>
 
+    <!-- NFC Image Information -->
+    <PreferenceCategory
+        android:title="NFC Image Information"
+        android:iconSpaceReserved="false">
+
+        <SwitchPreferenceCompat
+            android:key="Show_Station_Codes_On_Barcode"
+            android:title="Show Station Codes"
+            android:summary="Display origin → destination station codes on the NFC image"
+            android:defaultValue="false"
+            android:iconSpaceReserved="false" />
+
+        <SwitchPreferenceCompat
+            android:key="Show_Travel_Date_On_Barcode"
+            android:title="Show Travel Date"
+            android:summary="Display the travel date on the NFC image"
+            android:defaultValue="false"
+            android:iconSpaceReserved="false" />
+
+    </PreferenceCategory>
+
 </androidx.preference.PreferenceScreen>
