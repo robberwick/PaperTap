@@ -49,12 +49,18 @@ class TicketListActivity : AppCompatActivity() {
         recyclerView = findViewById(R.id.ticketsRecyclerView)
         emptyStateText = findViewById(R.id.emptyStateText)
 
-        ticketAdapter = TicketAdapter { ticket ->
-            // Navigate to flash screen when ticket is clicked
-            val intent = Intent(this, NfcFlasher::class.java)
-            intent.putExtra("TICKET_ID", ticket.id)
-            startActivity(intent)
-        }
+        ticketAdapter = TicketAdapter(
+            onTicketClick = { ticket ->
+                // Navigate to flash screen when ticket is clicked
+                val intent = Intent(this, NfcFlasher::class.java)
+                intent.putExtra("TICKET_ID", ticket.id)
+                startActivity(intent)
+            },
+            onTicketLongClick = { ticket ->
+                // Show edit dialog on long press
+                showEditLabelDialog(ticket)
+            }
+        )
 
         recyclerView.apply {
             adapter = ticketAdapter
@@ -253,6 +259,31 @@ class TicketListActivity : AppCompatActivity() {
         })
 
         itemTouchHelper.attachToRecyclerView(recyclerView)
+    }
+
+    private fun showEditLabelDialog(ticket: com.robberwick.papertap.database.TicketEntity) {
+        val input = android.widget.EditText(this)
+        input.setText(ticket.userLabel)
+        input.selectAll()
+
+        android.app.AlertDialog.Builder(this)
+            .setTitle("Edit label")
+            .setView(input)
+            .setPositiveButton("Save") { _, _ ->
+                val newLabel = input.text.toString().trim()
+                val finalLabel = if (newLabel.isEmpty()) {
+                    val dateFormat = java.text.SimpleDateFormat("MMM d, yyyy 'at' h:mm a", java.util.Locale.getDefault())
+                    "Ticket ${dateFormat.format(java.util.Date())}"
+                } else {
+                    newLabel
+                }
+
+                lifecycleScope.launch {
+                    ticketRepository.updateTicketLabel(ticket.id, finalLabel)
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {

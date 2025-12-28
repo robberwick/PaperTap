@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [TicketEntity::class], version = 3, exportSchema = false)
+@Database(entities = [TicketEntity::class], version = 4, exportSchema = false)
 abstract class TicketDatabase : RoomDatabase() {
     abstract fun ticketDao(): TicketDao
 
@@ -33,6 +33,29 @@ abstract class TicketDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Clean slate migration: drop old table and create new one
+                // This removes RSP6 decoding fields and adds user label + raw barcode data
+                db.execSQL("DROP TABLE IF EXISTS tickets")
+
+                // Create new table with simplified schema
+                db.execSQL("""
+                    CREATE TABLE tickets (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        userLabel TEXT NOT NULL,
+                        rawBarcodeData TEXT NOT NULL,
+                        barcodeFormat INTEGER NOT NULL,
+                        addedAt INTEGER NOT NULL,
+                        lastFlashedAt INTEGER,
+                        flashCount INTEGER NOT NULL,
+                        flashHistory TEXT,
+                        isFavorite INTEGER NOT NULL
+                    )
+                """)
+            }
+        }
+
         fun getDatabase(context: Context): TicketDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -40,7 +63,7 @@ abstract class TicketDatabase : RoomDatabase() {
                     TicketDatabase::class.java,
                     "ticket_database"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .build()
                 INSTANCE = instance
                 instance

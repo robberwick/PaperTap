@@ -75,23 +75,13 @@ class Preferences {
     
 
 
-    fun getShowTicketReference(): Boolean {
-        val prefs = getPreferences()
-        val result = prefs.getBoolean(PreferenceKeys.ShowTicketReference, false)
-
-        // Debug logging
-        android.util.Log.d("Preferences", "getShowTicketReference called")
-        android.util.Log.d("Preferences", "  Preference file: $Preference_File_Key")
-        android.util.Log.d("Preferences", "  Preference key: ${PreferenceKeys.ShowTicketReference}")
-        android.util.Log.d("Preferences", "  Result: $result")
-        android.util.Log.d("Preferences", "  All keys in file: ${prefs.all.keys}")
-
-        return result
+    fun getShowLabelOnBarcode(): Boolean {
+        return getPreferences().getBoolean(PreferenceKeys.ShowLabelOnBarcode, false)
     }
 
-    fun setShowTicketReference(show: Boolean) {
+    fun setShowLabelOnBarcode(show: Boolean) {
         with(getPreferences().edit()) {
-            putBoolean(PreferenceKeys.ShowTicketReference, show)
+            putBoolean(PreferenceKeys.ShowLabelOnBarcode, show)
             apply()
         }
     }

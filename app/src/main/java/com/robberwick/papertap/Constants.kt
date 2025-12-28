@@ -46,7 +46,7 @@ object Constants {
 object PrefKeys {
     var DisplaySize = "Display_Size"
     var QrPadding = "Qr_Padding"
-    var ShowTicketReference = "Show_Ticket_Reference"
+    var ShowLabelOnBarcode = "Show_Label_On_Barcode"
 }
 
 object IntentKeys {

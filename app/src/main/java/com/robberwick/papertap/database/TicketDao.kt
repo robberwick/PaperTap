@@ -5,10 +5,10 @@ import androidx.room.*
 
 @Dao
 interface TicketDao {
-    @Query("SELECT * FROM tickets ORDER BY dateTime DESC, createdAt DESC")
+    @Query("SELECT * FROM tickets ORDER BY addedAt DESC")
     fun getAllTickets(): LiveData<List<TicketEntity>>
 
-    @Query("SELECT * FROM tickets ORDER BY dateTime DESC, createdAt DESC")
+    @Query("SELECT * FROM tickets ORDER BY addedAt DESC")
     suspend fun getAllTicketsSync(): List<TicketEntity>
 
     @Insert
@@ -27,30 +27,14 @@ interface TicketDao {
     suspend fun deleteById(id: Long)
 
     /**
-     * Find a potential duplicate ticket by comparing reference, origin, and destination.
-     * This properly handles return journeys where both legs have the same reference but swapped stations.
+     * Find a duplicate ticket by raw barcode data
      */
-    @Query("""
-        SELECT * FROM tickets
-        WHERE (reference = :reference OR (reference IS NULL AND :reference IS NULL))
-        AND (originStation = :originStation OR (originStation IS NULL AND :originStation IS NULL))
-        AND (destinationStation = :destinationStation OR (destinationStation IS NULL AND :destinationStation IS NULL))
-        LIMIT 1
-    """)
-    suspend fun findDuplicate(
-        reference: String?,
-        originStation: String?,
-        destinationStation: String?
-    ): TicketEntity?
+    @Query("SELECT * FROM tickets WHERE rawBarcodeData = :rawData LIMIT 1")
+    suspend fun findDuplicate(rawData: String): TicketEntity?
 
     /**
-     * Find a duplicate by exact ticketDataJson match.
-     * Used for generic barcodes where raw barcode data should be checked.
+     * Update a ticket's label
      */
-    @Query("""
-        SELECT * FROM tickets
-        WHERE ticketDataJson = :ticketDataJson
-        LIMIT 1
-    """)
-    suspend fun findDuplicateByTicketData(ticketDataJson: String): TicketEntity?
+    @Query("UPDATE tickets SET userLabel = :newLabel WHERE id = :ticketId")
+    suspend fun updateLabel(ticketId: Long, newLabel: String)
 }

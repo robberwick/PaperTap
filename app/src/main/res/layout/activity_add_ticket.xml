@@ -65,56 +65,24 @@
                 android:textColor="?android:attr/textColorPrimary"
                 android:paddingBottom="16dp" />
 
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/ticketDetailsCard"
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/labelInputLayout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardElevation="2dp"
-                app:cardCornerRadius="8dp">
+                android:hint="Ticket label (optional)"
+                app:helperText="e.g., 'London to Manchester' - leave blank for auto-generated label"
+                app:counterEnabled="true"
+                app:counterMaxLength="50">
 
-                <LinearLayout
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/labelInput"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
+                    android:maxLength="50"
+                    android:inputType="textCapSentences"
+                    android:imeOptions="actionDone" />
 
-                    <TextView
-                        android:id="@+id/ticketJourneySummary"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:textColor="?android:attr/textColorPrimary" />
-
-                    <TextView
-                        android:id="@+id/ticketDateTime"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textSize="14sp"
-                        android:textColor="?android:attr/textColorPrimary"
-                        android:layout_marginTop="4dp" />
-
-                    <TextView
-                        android:id="@+id/ticketType"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textSize="14sp"
-                        android:textColor="?android:attr/textColorPrimary"
-                        android:layout_marginTop="4dp" />
-
-                    <TextView
-                        android:id="@+id/ticketReference"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textSize="12sp"
-                        android:textColor="?android:attr/textColorSecondary"
-                        android:fontFamily="monospace"
-                        android:alpha="0.7"
-                        android:layout_marginTop="4dp" />
-
-                </LinearLayout>
-
-            </com.google.android.material.card.MaterialCardView>
+            </com.google.android.material.textfield.TextInputLayout>
 
             <ImageView
                 android:id="@+id/qrCodePreview"

@@ -88,28 +88,28 @@ object BarcodeGenerator {
      * @param width The desired final width in pixels
      * @param height The desired final height in pixels
      * @param padding The padding in pixels around the barcode
-     * @param ticketReference Optional ticket reference to add below the barcode
+     * @param label Optional label text to add below the barcode
      * @return The generated barcode with optional text, scaled to fit target dimensions
      */
-    fun generateBarcodeWithReference(
+    fun generateBarcodeWithLabel(
         rawData: String,
         format: BarcodeFormat,
         width: Int,
         height: Int,
         edgePadding: Int = 0,
-        ticketReference: String? = null
+        label: String? = null
     ): Bitmap {
-        android.util.Log.d("BarcodeGenerator", "generateBarcodeWithReference called")
-        android.util.Log.d("BarcodeGenerator", "  ticketReference: '$ticketReference'")
+        android.util.Log.d("BarcodeGenerator", "generateBarcodeWithLabel called")
+        android.util.Log.d("BarcodeGenerator", "  label: '$label'")
         android.util.Log.d("BarcodeGenerator", "  width: $width, height: $height, edgePadding: $edgePadding")
 
         // Calculate available space after accounting for edge padding on all sides
         val availableWidth = width - (edgePadding * 2)
         val availableHeight = height - (edgePadding * 2)
 
-        // If no reference text, generate plain barcode within padded area
-        if (ticketReference.isNullOrEmpty()) {
-            android.util.Log.d("BarcodeGenerator", "  No ticket reference, returning plain barcode")
+        // If no label text, generate plain barcode within padded area
+        if (label.isNullOrEmpty()) {
+            android.util.Log.d("BarcodeGenerator", "  No label, returning plain barcode")
 
             // Keep barcode square
             val barcodeSize = minOf(availableWidth, availableHeight)
@@ -129,7 +129,7 @@ object BarcodeGenerator {
             return result
         }
 
-        android.util.Log.d("BarcodeGenerator", "  Adding ticket reference to barcode")
+        android.util.Log.d("BarcodeGenerator", "  Adding label to barcode")
 
         // Calculate text size (about 2/15th of the available height, doubled for readability)
         val textSizePx = (availableHeight / 15f * 2f).coerceAtLeast(24f)
@@ -145,7 +145,7 @@ object BarcodeGenerator {
 
         // Measure text dimensions
         val textBounds = android.graphics.Rect()
-        paint.getTextBounds(ticketReference, 0, ticketReference.length, textBounds)
+        paint.getTextBounds(label, 0, label.length, textBounds)
         val textHeight = textBounds.height()
 
         // Calculate spacing (about 1/20th of available width)
@@ -175,10 +175,10 @@ object BarcodeGenerator {
         val barcodeY = edgePadding.toFloat()
         canvas.drawBitmap(barcode, barcodeX, barcodeY, null)
 
-        // Draw the text below the barcode with TR prefix
+        // Draw the label below the barcode
         val textX = width / 2f
         val textY = barcodeY + barcodeSize + spacing + textHeight.toFloat()
-        canvas.drawText("TR$ticketReference", textX, textY, paint)
+        canvas.drawText(label, textX, textY, paint)
 
         // Clean up
         barcode.recycle()

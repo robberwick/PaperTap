@@ -14,28 +14,28 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
 class PdfQrExtractor(private val context: Context) {
-    
+
     private val TAG = "PdfQrExtractor"
 
     suspend fun extractQrCodeFromPdf(pdfUri: Uri, padding: Int = 5): Pair<Bitmap, BarcodeData>? {
         var fileDescriptor: ParcelFileDescriptor? = null
         var pdfRenderer: PdfRenderer? = null
-        
+
         try {
             fileDescriptor = context.contentResolver.openFileDescriptor(pdfUri, "r")
             if (fileDescriptor == null) {
                 Log.e(TAG, "Failed to open file descriptor")
                 return null
             }
-            
+
             pdfRenderer = PdfRenderer(fileDescriptor)
             Log.d(TAG, "PDF has ${pdfRenderer.pageCount} pages")
-            
+
             // Scan all pages for QR code
             for (pageIndex in 0 until pdfRenderer.pageCount) {
                 Log.d(TAG, "Scanning page $pageIndex")
                 val page = pdfRenderer.openPage(pageIndex)
-                
+
                 // Render page to bitmap at high resolution for better QR detection
                 val bitmap = Bitmap.createBitmap(
                     page.width * 3,
@@ -44,17 +44,17 @@ class PdfQrExtractor(private val context: Context) {
                 )
                 page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                 page.close()
-                
+
                 // Try to find QR code in this page
                 val result = extractQrFromBitmap(bitmap, padding)
                 if (result != null) {
                     Log.d(TAG, "QR code found on page $pageIndex")
                     return result
                 }
-                
+
                 bitmap.recycle()
             }
-            
+
             Log.d(TAG, "No QR code found in any page")
             return null
         } catch (e: Exception) {
@@ -66,7 +66,7 @@ class PdfQrExtractor(private val context: Context) {
             fileDescriptor?.close()
         }
     }
-    
+
     private suspend fun extractQrFromBitmap(bitmap: Bitmap, padding: Int): Pair<Bitmap, BarcodeData>? = suspendCoroutine { continuation ->
         val options = BarcodeScannerOptions.Builder()
             .setBarcodeFormats(
@@ -99,17 +99,10 @@ class PdfQrExtractor(private val context: Context) {
                         return@addOnSuccessListener
                     }
 
-                    // Attempt to decode if it's an Aztec code
-                    var ticketData: TicketData? = null
-                    if (barcode.format == Barcode.FORMAT_AZTEC) {
-                        ticketData = decodeTicketData(rawValue, barcode.format)
-                    }
-
                     // Create BarcodeData object
                     val barcodeData = BarcodeData(
                         rawData = rawValue,
-                        barcodeFormat = barcode.format,
-                        ticketData = ticketData
+                        barcodeFormat = barcode.format
                     )
 
                     if (boundingBox != null) {
@@ -138,42 +131,5 @@ class PdfQrExtractor(private val context: Context) {
                 e.printStackTrace()
                 continuation.resume(null)
             }
-    }
-    
-    private fun decodeTicketData(rawValue: String, barcodeFormat: Int): TicketData? {
-        return try {
-            Log.d(TAG, "Attempting to decode Aztec ticket data")
-            val ticket = com.robberwick.rsp6.Rsp6Decoder.decode(rawValue)
-
-            // Initialize lookups if not already done
-            StationLookup.init(context)
-            FareCodeLookup.init(context)
-
-            // Convert NLC codes to station names
-            val originStation = StationLookup.getStationName(ticket.originNlc)
-            val destinationStation = StationLookup.getStationName(ticket.destinationNlc)
-
-            // Convert fare code to human-readable name
-            val fareName = FareCodeLookup.getFareName(ticket.fare)
-
-            TicketData(
-                originStation = originStation,
-                destinationStation = destinationStation,
-                travelDate = ticket.startDate.toString(),
-                travelTime = ticket.departTime.toString(),
-                ticketType = fareName,
-                railcardType = if (ticket.discountCode > 0) "Code ${ticket.discountCode}" else null,
-                ticketClass = if (ticket.standardClass) "Standard" else "First",
-                ticketReference = ticket.ticketReference,
-                rawData = rawValue,
-                barcodeFormat = barcodeFormat
-            )
-        } catch (e: com.robberwick.rsp6.Rsp6DecoderException) {
-            Log.e(TAG, "Failed to decode RSP6 ticket", e)
-            null
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to decode ticket data", e)
-            null
-        }
     }
 }

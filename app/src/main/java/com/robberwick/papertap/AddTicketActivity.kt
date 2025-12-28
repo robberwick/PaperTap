@@ -1,27 +1,23 @@
 package com.robberwick.papertap
 
-import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
-import android.os.ParcelFileDescriptor
-import android.view.View
 import android.widget.Button
 import android.widget.ImageView
-import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.google.android.material.card.MaterialCardView
-import com.robberwick.papertap.database.TicketEntity
+import com.google.android.material.textfield.TextInputEditText
 import com.robberwick.papertap.database.TicketRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.io.FileOutputStream
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
@@ -31,16 +27,13 @@ class AddTicketActivity : AppCompatActivity() {
     private lateinit var preferences: Preferences
 
     private lateinit var qrCodePreview: ImageView
-    private lateinit var ticketDetailsCard: MaterialCardView
-    private lateinit var ticketJourneySummary: TextView
-    private lateinit var ticketDateTime: TextView
-    private lateinit var ticketType: TextView
-    private lateinit var ticketReference: TextView
+    private lateinit var labelInput: TextInputEditText
     private lateinit var cancelButton: Button
     private lateinit var addButton: Button
 
     private var extractedQrBitmap: Bitmap? = null
-    private var extractedTicketData: TicketData? = null
+    private var extractedRawData: String? = null
+    private var extractedBarcodeFormat: Int? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         android.util.Log.d("AddTicketActivity", "onCreate - Activity starting")
@@ -52,11 +45,7 @@ class AddTicketActivity : AppCompatActivity() {
 
         // Find views
         qrCodePreview = findViewById(R.id.qrCodePreview)
-        ticketDetailsCard = findViewById(R.id.ticketDetailsCard)
-        ticketJourneySummary = findViewById(R.id.ticketJourneySummary)
-        ticketDateTime = findViewById(R.id.ticketDateTime)
-        ticketType = findViewById(R.id.ticketType)
-        ticketReference = findViewById(R.id.ticketReference)
+        labelInput = findViewById(R.id.labelInput)
         cancelButton = findViewById(R.id.cancelButton)
         addButton = findViewById(R.id.addButton)
 
@@ -110,8 +99,9 @@ class AddTicketActivity : AppCompatActivity() {
                 if (result != null) {
                     val (qrBitmap, barcodeData) = result
                     extractedQrBitmap = qrBitmap
-                    extractedTicketData = barcodeData.ticketData
-                    displayPreview(qrBitmap, barcodeData.ticketData)
+                    extractedRawData = barcodeData.rawData
+                    extractedBarcodeFormat = barcodeData.barcodeFormat
+                    displayPreview(qrBitmap)
                 } else {
                     Toast.makeText(
                         this@AddTicketActivity,
@@ -173,8 +163,9 @@ class AddTicketActivity : AppCompatActivity() {
                 if (result != null) {
                     val (qrBitmap, barcodeData) = result
                     extractedQrBitmap = qrBitmap
-                    extractedTicketData = barcodeData.ticketData
-                    displayPreview(qrBitmap, barcodeData.ticketData)
+                    extractedRawData = barcodeData.rawData
+                    extractedBarcodeFormat = barcodeData.barcodeFormat
+                    displayPreview(qrBitmap)
                 } else {
                     Toast.makeText(
                         this@AddTicketActivity,
@@ -236,17 +227,10 @@ class AddTicketActivity : AppCompatActivity() {
                         return@addOnSuccessListener
                     }
 
-                    // Attempt to decode if it's an Aztec code
-                    var ticketData: TicketData? = null
-                    if (barcode.format == com.google.mlkit.vision.barcode.common.Barcode.FORMAT_AZTEC) {
-                        ticketData = decodeTicketData(rawValue, barcode.format)
-                    }
-
                     // Create BarcodeData object
                     val barcodeData = BarcodeData(
                         rawData = rawValue,
-                        barcodeFormat = barcode.format,
-                        ticketData = ticketData
+                        barcodeFormat = barcode.format
                     )
 
                     if (boundingBox != null) {
@@ -270,147 +254,52 @@ class AddTicketActivity : AppCompatActivity() {
             }
     }
 
-    private fun decodeTicketData(rawValue: String, barcodeFormat: Int): TicketData? {
-        return try {
-            val ticket = com.robberwick.rsp6.Rsp6Decoder.decode(rawValue)
-
-            // Initialize lookups
-            StationLookup.init(this)
-            FareCodeLookup.init(this)
-
-            val originStation = StationLookup.getStationName(ticket.originNlc)
-            val destinationStation = StationLookup.getStationName(ticket.destinationNlc)
-            val fareName = FareCodeLookup.getFareName(ticket.fare)
-
-            TicketData(
-                originStation = originStation,
-                destinationStation = destinationStation,
-                travelDate = ticket.startDate.toString(),
-                travelTime = ticket.departTime.toString(),
-                ticketType = fareName,
-                railcardType = if (ticket.discountCode > 0) "Code ${ticket.discountCode}" else null,
-                ticketClass = if (ticket.standardClass) "Standard" else "First",
-                ticketReference = ticket.ticketReference,
-                rawData = rawValue,
-                barcodeFormat = barcodeFormat
-            )
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    private fun displayPreview(qrBitmap: Bitmap, ticketData: TicketData?) {
+    private fun displayPreview(qrBitmap: Bitmap) {
         // Display QR code
         qrCodePreview.setImageBitmap(qrBitmap)
-
-        // Display ticket details if available
-        if (ticketData != null) {
-            ticketDetailsCard.visibility = View.VISIBLE
-
-            // Journey summary
-            val origin = ticketData.originStation ?: "Unknown"
-            val dest = ticketData.destinationStation ?: "Unknown"
-            ticketJourneySummary.text = "$origin → $dest"
-
-            // Date and time
-            val date = ticketData.travelDate ?: ""
-            val time = ticketData.travelTime ?: ""
-            val shouldShowTime = time.isNotEmpty() && time != "00:00"
-
-            if (date.isNotEmpty()) {
-                ticketDateTime.text = if (shouldShowTime) "$date $time" else date
-                ticketDateTime.visibility = View.VISIBLE
-            } else {
-                ticketDateTime.visibility = View.GONE
-            }
-
-            // Ticket type and class
-            val typeText = buildString {
-                ticketData.ticketType?.let { append(it) }
-                if (ticketData.ticketClass != null && ticketData.ticketType != null) {
-                    append(" • ")
-                }
-                ticketData.ticketClass?.let { append(it) }
-            }
-
-            if (typeText.isNotEmpty()) {
-                ticketType.text = typeText
-                ticketType.visibility = View.VISIBLE
-            } else {
-                ticketType.visibility = View.GONE
-            }
-
-            // Ticket reference
-            val formattedRef = ticketData.getFormattedReference()
-            if (formattedRef != null) {
-                ticketReference.text = formattedRef
-                ticketReference.visibility = View.VISIBLE
-            } else {
-                ticketReference.visibility = View.GONE
-            }
-        } else {
-            // No ticket data - just show generic message
-            ticketDetailsCard.visibility = View.VISIBLE
-            ticketJourneySummary.text = "QR Code"
-            ticketDateTime.visibility = View.GONE
-            ticketType.visibility = View.GONE
-            ticketReference.visibility = View.GONE
-        }
     }
 
     private fun addTicket() {
-        val qrBitmap = extractedQrBitmap
-        if (qrBitmap == null) {
-            Toast.makeText(this, "No QR code to save", Toast.LENGTH_SHORT).show()
+        val rawData = extractedRawData
+        val barcodeFormat = extractedBarcodeFormat
+
+        if (rawData == null || barcodeFormat == null) {
+            Toast.makeText(this, "No barcode to save", Toast.LENGTH_SHORT).show()
             return
+        }
+
+        // Get label from input or generate default
+        val label = labelInput.text?.toString()?.trim().let {
+            if (it.isNullOrEmpty()) {
+                generateDefaultLabel()
+            } else {
+                it
+            }
         }
 
         lifecycleScope.launch {
             try {
-                // Check for duplicate ticket
-                val existingTicket = withContext(Dispatchers.IO) {
-                    ticketRepository.checkForDuplicate(extractedTicketData)
-                }
-
-                if (existingTicket != null) {
-                    // Duplicate found - show message and close
-                    val message = if (extractedTicketData != null) {
-                        "This ticket is already in your collection"
-                    } else {
-                        "This QR code has already been added"
-                    }
-                    Toast.makeText(this@AddTicketActivity, message, Toast.LENGTH_LONG).show()
-                    finish()
-                    return@launch
-                }
-
-                // Create ticket entity (temporarily with placeholder path)
-                val ticketEntity = TicketEntity.fromTicketData(
-                    extractedTicketData,
-                    ""  // Will be updated after we get the ID
-                )
-
-                // Insert into database to get ID
+                // Insert ticket - repository will check for duplicates
                 val ticketId = withContext(Dispatchers.IO) {
-                    ticketRepository.insert(ticketEntity)
+                    ticketRepository.insertTicket(rawData, barcodeFormat, label)
                 }
 
-                // Save QR code image with the generated ID
-                val imagePath = ticketRepository.getQrCodeImagePath(ticketId)
-                withContext(Dispatchers.IO) {
-                    saveQrCodeImage(qrBitmap, imagePath)
+                // Check if it was a duplicate
+                val ticket = withContext(Dispatchers.IO) {
+                    ticketRepository.getById(ticketId)
                 }
 
-                // Update entity with correct path
-                val updatedEntity = ticketEntity.copy(
-                    id = ticketId,
-                    qrCodeImagePath = imagePath
-                )
-                withContext(Dispatchers.IO) {
-                    ticketRepository.update(updatedEntity)
+                if (ticket != null && ticket.userLabel != label) {
+                    // Duplicate found (label doesn't match what we tried to insert)
+                    Toast.makeText(
+                        this@AddTicketActivity,
+                        "This ticket is already in your collection",
+                        Toast.LENGTH_LONG
+                    ).show()
+                } else {
+                    Toast.makeText(this@AddTicketActivity, "Ticket added!", Toast.LENGTH_SHORT).show()
                 }
 
-                Toast.makeText(this@AddTicketActivity, "Ticket added!", Toast.LENGTH_SHORT).show()
                 finish()
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -423,51 +312,8 @@ class AddTicketActivity : AppCompatActivity() {
         }
     }
 
-    private fun saveQrCodeImage(bitmap: Bitmap, path: String) {
-        val (sw, sh) = preferences.getScreenSizePixels()
-
-        // Add reference text if enabled
-        val withReference = addTicketReferenceToImage(bitmap, extractedTicketData?.ticketReference)
-
-        // Convert to black and white
-        val processedBitmap = convertToBlackAndWhite(withReference)
-
-        // Scale to screen size
-        val scaledBitmap = Bitmap.createScaledBitmap(processedBitmap, sw, sh, false)
-
-        // Save to file
-        FileOutputStream(File(path)).use { output ->
-            scaledBitmap.compress(Bitmap.CompressFormat.PNG, 100, output)
-        }
-    }
-
-    private fun convertToBlackAndWhite(source: Bitmap): Bitmap {
-        val width = source.width
-        val height = source.height
-        val result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-
-        val threshold = 128
-
-        for (x in 0 until width) {
-            for (y in 0 until height) {
-                val pixel = source.getPixel(x, y)
-                val r = Color.red(pixel)
-                val g = Color.green(pixel)
-                val b = Color.blue(pixel)
-                val luminance = (0.299 * r + 0.587 * g + 0.114 * b).toInt()
-
-                val newColor = if (luminance < threshold) Color.BLACK else Color.WHITE
-                result.setPixel(x, y, newColor)
-            }
-        }
-
-        return result
-    }
-
-    private fun addTicketReferenceToImage(qrBitmap: Bitmap, ticketReference: String?): Bitmap {
-        // Reference text is now added during regeneration in NfcFlasher,
-        // not during initial save. This keeps the stored image simple and allows
-        // the reference to be toggled on/off without re-importing the ticket.
-        return qrBitmap
+    private fun generateDefaultLabel(): String {
+        val dateFormat = SimpleDateFormat("MMM d, yyyy 'at' h:mm a", Locale.getDefault())
+        return "Ticket ${dateFormat.format(Date())}"
     }
 }

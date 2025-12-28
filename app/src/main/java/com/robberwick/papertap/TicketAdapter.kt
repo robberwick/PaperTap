@@ -14,7 +14,8 @@ import com.google.android.material.color.MaterialColors
 import com.robberwick.papertap.database.TicketEntity
 
 class TicketAdapter(
-    private val onTicketClick: (TicketEntity) -> Unit
+    private val onTicketClick: (TicketEntity) -> Unit,
+    private val onTicketLongClick: ((TicketEntity) -> Unit)? = null
 ) : ListAdapter<TicketEntity, TicketAdapter.TicketViewHolder>(TicketDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TicketViewHolder {
@@ -33,7 +34,7 @@ class TicketAdapter(
 
         val isMostRecent = mostRecentTicket != null && ticket.id == mostRecentTicket.id
 
-        holder.bind(ticket, isMostRecent, onTicketClick)
+        holder.bind(ticket, isMostRecent, onTicketClick, onTicketLongClick)
     }
 
     fun getTicketAt(position: Int): TicketEntity {
@@ -46,9 +47,13 @@ class TicketAdapter(
         private val journeyText: TextView = itemView.findViewById(R.id.ticketJourney)
         private val usageInfoText: TextView = itemView.findViewById(R.id.usageInfo)
 
-        fun bind(ticket: TicketEntity, isMostRecent: Boolean, onTicketClick: (TicketEntity) -> Unit) {
-            dateTimeText.text = ticket.dateTime
-            journeyText.text = ticket.journeySummary
+        fun bind(ticket: TicketEntity, isMostRecent: Boolean, onTicketClick: (TicketEntity) -> Unit, onTicketLongClick: ((TicketEntity) -> Unit)?) {
+            // Show label as primary text
+            journeyText.text = ticket.userLabel
+
+            // Show "Added [date]" as secondary text
+            val dateFormat = java.text.SimpleDateFormat("MMM d, yyyy", java.util.Locale.getDefault())
+            dateTimeText.text = "Added ${dateFormat.format(java.util.Date(ticket.addedAt))}"
 
             // Apply background and text colors for most recently flashed ticket
             if (isMostRecent) {
@@ -113,6 +118,11 @@ class TicketAdapter(
 
             itemView.setOnClickListener {
                 onTicketClick(ticket)
+            }
+
+            itemView.setOnLongClickListener {
+                onTicketLongClick?.invoke(ticket)
+                true
             }
         }
     }
