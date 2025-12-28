@@ -17,6 +17,7 @@
         <!-- Ticket List Activity (Main/Launcher) -->
         <activity
             android:name=".TicketListActivity"
+            android:theme="@style/Theme.NFCEInkWriter.Splash"
             android:launchMode="singleTop"
             android:exported="true">
             <intent-filter>

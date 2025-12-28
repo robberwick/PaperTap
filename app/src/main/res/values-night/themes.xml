@@ -75,4 +75,22 @@
         <item name="colorAppBar">@color/md_theme_surfaceContainerHigh</item>
         <item name="colorOnAppBar">@color/md_theme_onSurface</item>
     </style>
+
+    <!-- Splash Screen Theme - Night Mode -->
+    <style name="Theme.NFCEInkWriter.Splash" parent="Theme.SplashScreen">
+        <!-- Splash screen background color (primary blue) -->
+        <item name="windowSplashScreenBackground">@color/md_theme_primary</item>
+
+        <!-- Splash screen icon -->
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_icon_simple</item>
+
+        <!-- Icon background (match background for consistency) -->
+        <item name="windowSplashScreenIconBackgroundColor">@color/md_theme_primary</item>
+
+        <!-- Duration to show splash (300ms for smooth transition) -->
+        <item name="windowSplashScreenAnimationDuration">300</item>
+
+        <!-- Post-splash theme to apply -->
+        <item name="postSplashScreenTheme">@style/Theme.NFCEInkWriter</item>
+    </style>
 </resources>
