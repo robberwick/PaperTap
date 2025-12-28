@@ -17,13 +17,6 @@
             app:seekBarIncrement="1"
             android:iconSpaceReserved="false" />
 
-        <SwitchPreferenceCompat
-            android:key="Show_Ticket_Reference"
-            android:title="Show Ticket Reference"
-            android:summary="Display the ticket reference number below the QR code (e.g., TRG7JF3BVVN)"
-            android:defaultValue="false"
-            android:iconSpaceReserved="false" />
-
     </PreferenceCategory>
 
 </androidx.preference.PreferenceScreen>
