@@ -4,7 +4,6 @@ import android.app.PendingIntent
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.media.AudioAttributes
 import android.media.AudioManager
 import android.os.Build
@@ -27,18 +26,14 @@ import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.constraintlayout.widget.ConstraintLayout
 import com.google.android.material.card.MaterialCardView
-import com.google.android.material.progressindicator.LinearProgressIndicator
 import androidx.lifecycle.lifecycleScope
 import com.robberwick.papertap.database.TicketEntity
 import com.robberwick.papertap.database.TicketRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import waveshare.feng.nfctag.activity.WaveShareHandler
 import waveshare.feng.nfctag.activity.a
-import java.io.File
 import java.io.IOException
 import java.nio.charset.StandardCharsets
 import kotlin.math.sin
@@ -50,7 +45,6 @@ class NfcFlasher : AppCompatActivity() {
     private lateinit var statusProgressIndicator: com.google.android.material.progressindicator.CircularProgressIndicator
 
     private var mIsFlashing = false
-        get() = field
         set(isFlashing) {
             field = isFlashing
 
@@ -86,10 +80,8 @@ class NfcFlasher : AppCompatActivity() {
     private var mNfcIntentFilters: Array<IntentFilter>? = null
     private var mNfcCheckHandler: Handler? = null
     private val mNfcCheckIntervalMs = 250L
-    private val mProgressCheckInterval = 50L
     private var mProgressVal: Int = 0
     private var mBitmap: Bitmap? = null
-    private var mImgFilePath: String? = null
     private var mImgFileUri: Uri? = null
 
     // Note: Use of object expression / anon class is so `this` can be used
@@ -132,20 +124,20 @@ class NfcFlasher : AppCompatActivity() {
          */
         val ticketId = intent.getLongExtra("TICKET_ID", -1L)
 
-        android.util.Log.d("NfcFlasher", "onCreate - ticketId: $ticketId")
+        Log.d("NfcFlasher", "onCreate - ticketId: $ticketId")
 
         if (ticketId != -1L) {
             // Load ticket from database
-            android.util.Log.d("NfcFlasher", "Loading ticket from database, ID: $ticketId")
+            Log.d("NfcFlasher", "Loading ticket from database, ID: $ticketId")
             lifecycleScope.launch {
                 mTicketEntity = withContext(Dispatchers.IO) {
                     ticketRepository.getById(ticketId)
                 }
 
-                android.util.Log.d("NfcFlasher", "Ticket loaded: $mTicketEntity")
+                Log.d("NfcFlasher", "Ticket loaded: $mTicketEntity")
 
                 if (mTicketEntity != null) {
-                    android.util.Log.d("NfcFlasher", "Ticket loaded: ${mTicketEntity!!.userLabel}")
+                    Log.d("NfcFlasher", "Ticket loaded: ${mTicketEntity!!.userLabel}")
 
                     loadTicketImage(mTicketEntity!!)
                     displayTicketDetails(mTicketEntity!!)
@@ -165,8 +157,6 @@ class NfcFlasher : AppCompatActivity() {
 
         // Action card elements are accessed directly when needed via findViewById
 
-        val originatingIntent = intent
-
         // Set up intent and intent filters for NFC / NDEF scanning
         // This is part of the setup for foreground dispatch system
         val nfcIntent = Intent(this, javaClass).apply {
@@ -174,7 +164,7 @@ class NfcFlasher : AppCompatActivity() {
         }
         this.mPendingIntent = PendingIntent.getActivity(this, 0, nfcIntent, PendingIntent.FLAG_MUTABLE)
         // Set up the filters
-        var ndefIntentFilter: IntentFilter = IntentFilter(NfcAdapter.ACTION_NDEF_DISCOVERED)
+        val ndefIntentFilter = IntentFilter(NfcAdapter.ACTION_NDEF_DISCOVERED)
         try {
             // android:host
             ndefIntentFilter.addDataAuthority("ext", null)
@@ -193,7 +183,7 @@ class NfcFlasher : AppCompatActivity() {
 
             // android:scheme
             ndefIntentFilter.addDataScheme("vnd.android.nfc")
-        } catch (e: IntentFilter.MalformedMimeTypeException) {
+        } catch (_: IntentFilter.MalformedMimeTypeException) {
             Log.e("mimeTypeException", "Invalid / Malformed mimeType")
         }
         mNfcIntentFilters = arrayOf(ndefIntentFilter)
@@ -209,7 +199,7 @@ class NfcFlasher : AppCompatActivity() {
     }
     
     override fun onSupportNavigateUp(): Boolean {
-        onBackPressed()
+        finish()
         return true
     }
     
@@ -241,7 +231,12 @@ class NfcFlasher : AppCompatActivity() {
         val screenSizeEnum = preferences.getScreenSizeEnum()
 
         if (intent.action == NfcAdapter.ACTION_NDEF_DISCOVERED || intent.action == NfcAdapter.ACTION_TAG_DISCOVERED || intent.action == NfcAdapter.ACTION_TECH_DISCOVERED) {
-            val detectedTag: Tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG)!!
+            @Suppress("DEPRECATION")
+            val detectedTag: Tag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                intent.getParcelableExtra(NfcAdapter.EXTRA_TAG, Tag::class.java)!!
+            } else {
+                intent.getParcelableExtra(NfcAdapter.EXTRA_TAG)!!
+            }
             val tagId = String(detectedTag.id, StandardCharsets.US_ASCII)
             val tagTechList = detectedTag.techList
 
@@ -273,14 +268,19 @@ class NfcFlasher : AppCompatActivity() {
             // an extra check, AAR payload will be manually checked, as well as ID
             if (intent.action == NfcAdapter.ACTION_NDEF_DISCOVERED) {
                 var aarFound = false
-                val rawMsgs = intent.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES)
+                @Suppress("DEPRECATION")
+                val rawMsgs = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    intent.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES, android.os.Parcelable::class.java)
+                } else {
+                    intent.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES)
+                }
                 if (rawMsgs != null) {
                     for (msg in rawMsgs) {
                         val ndefMessage: NdefMessage = msg as NdefMessage
                         val records = ndefMessage.records
                         for (record in records) {
                             val payloadStr = String(record.payload)
-                            if (!aarFound) aarFound = payloadStr == "waveshare.feng.nfctag"
+                            aarFound = aarFound || payloadStr == "waveshare.feng.nfctag"
                             if (aarFound) break
                         }
                         if (aarFound) break
@@ -305,7 +305,7 @@ class NfcFlasher : AppCompatActivity() {
         }
     }
 
-    private suspend fun flashBitmap(tag: Tag, bitmap: Bitmap, screenSizeEnum: Int) {
+    private fun flashBitmap(tag: Tag, bitmap: Bitmap, screenSizeEnum: Int) {
         this.mIsFlashing = true
         // val waveShareHandler = WaveShareHandler(this)
         val a = a() // Create a new instance.
@@ -320,26 +320,25 @@ class NfcFlasher : AppCompatActivity() {
             override fun run() {
                 var success = false
                 val tntag: NfcA //NFC tag
-                val thread = Thread(Runnable
                 //Create thread
-                {
-                    var EPD_total_progress = 0
-                    while (EPD_total_progress != -1) {
-                        EPD_total_progress = a.c //Read the progress
-                        runOnUiThread(Runnable {
-                            updateProgressBar(EPD_total_progress)
-                        })
-                        if (EPD_total_progress == 100) {
+                val thread = Thread {
+                    var epdTotalProgress = 0
+                    while (epdTotalProgress != -1) {
+                        epdTotalProgress = a.c //Read the progress
+                        runOnUiThread {
+                            updateProgressBar(epdTotalProgress)
+                        }
+                        if (epdTotalProgress == 100) {
                             break
                         }
                         SystemClock.sleep(10)
                     }
-                })
+                }
                 thread.start() //start the thread
                 tntag = NfcA.get(tag) //Get the tag instance.
                 try {
-                    val whether_succeed: Int = a.a(screenSizeEnum, bitmap) //Send picture
-                    if (whether_succeed == 1) {
+                    val whetherSucceed = a.a(screenSizeEnum, bitmap) //Send picture
+                    if (whetherSucceed == 1) {
                         success = true
                     }
                 } catch (e: IOException) {
@@ -347,15 +346,14 @@ class NfcFlasher : AppCompatActivity() {
                 } finally {
                         try {
                             // Need to run toast on main thread...
-                            runOnUiThread(Runnable {
-                                var toast: Toast? = null
+                            runOnUiThread {
                                 if (!success) {
                                     playErrorSound()
-                                    toast = Toast.makeText(
+                                    Toast.makeText(
                                         applicationContext,
                                         "FAILED to Flash :( $errorString",
                                         Toast.LENGTH_LONG
-                                    )
+                                    ).show()
                                 } else {
                                     playSuccessSound()
 
@@ -368,14 +366,13 @@ class NfcFlasher : AppCompatActivity() {
                                         }
                                     }
 
-                                    toast = Toast.makeText(
+                                    Toast.makeText(
                                         applicationContext,
                                         "Success! Flashed display!",
                                         Toast.LENGTH_LONG
-                                    )
+                                    ).show()
                                 }
-                                toast?.show()
-                            })
+                            }
                             Log.v("Final success val", "Success = $success")
                             tntag.close()
                         } catch (e: IOException) { //handle exception error
@@ -383,9 +380,9 @@ class NfcFlasher : AppCompatActivity() {
                             Log.v("Flashing failed", "See trace above")
                         }
                         Log.v("Tag closed", "Setting flash in progress = false")
-                        runOnUiThread(Runnable {
+                        runOnUiThread {
                             mIsFlashing = false
-                        })
+                        }
                 }
             }
         }
@@ -442,7 +439,7 @@ class NfcFlasher : AppCompatActivity() {
         }
     }
 
-    private fun updateProgressBar(updated: Int) {
+    private fun updateProgressBar(@Suppress("UNUSED_PARAMETER") updated: Int) {
         // Progress is displayed via indeterminate spinner in status card
         // The spinner is shown/hidden by the mIsFlashing property setter
         // We ignore the actual progress value and just show a spinner
@@ -577,9 +574,9 @@ class NfcFlasher : AppCompatActivity() {
             val showLabel = preferences.getShowLabelOnBarcode()
             val label = if (showLabel && ticket.userLabel.isNotEmpty()) ticket.userLabel else null
 
-            android.util.Log.d("NfcFlasher", "loadTicketImage - Regenerating from raw barcode data")
-            android.util.Log.d("NfcFlasher", "loadTicketImage - showLabel: $showLabel")
-            android.util.Log.d("NfcFlasher", "loadTicketImage - label: $label")
+            Log.d("NfcFlasher", "loadTicketImage - Regenerating from raw barcode data")
+            Log.d("NfcFlasher", "loadTicketImage - showLabel: $showLabel")
+            Log.d("NfcFlasher", "loadTicketImage - label: $label")
 
             // Always use generateBarcodeWithLabel - it handles null labels correctly
             this.mBitmap = BarcodeGenerator.generateBarcodeWithLabel(
@@ -601,9 +598,9 @@ class NfcFlasher : AppCompatActivity() {
             val imagePreviewElem: ImageView = findViewById(R.id.previewImageView)
             imagePreviewElem.setImageBitmap(this.mBitmap)
 
-            android.util.Log.d("NfcFlasher", "Successfully regenerated bitmap from raw barcode data")
+            Log.d("NfcFlasher", "Successfully regenerated bitmap from raw barcode data")
         } catch (e: Exception) {
-            android.util.Log.e("NfcFlasher", "Failed to regenerate barcode", e)
+            Log.e("NfcFlasher", "Failed to regenerate barcode", e)
             Toast.makeText(this, "Failed to generate barcode: ${e.message}", Toast.LENGTH_LONG).show()
             finish()
         }
