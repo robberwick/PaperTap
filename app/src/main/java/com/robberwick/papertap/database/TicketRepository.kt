@@ -30,6 +30,13 @@ class TicketRepository(context: Context) {
     }
 
     /**
+     * Find a ticket with matching barcode data
+     */
+    suspend fun findByBarcodeData(rawData: String): TicketEntity? {
+        return ticketDao.findDuplicate(rawData)
+    }
+
+    /**
      * Insert a ticket with raw barcode data and user label
      * Returns the ID of the inserted ticket, or the ID of an existing duplicate if found
      */

@@ -142,6 +142,12 @@ class AddTicketActivity : AppCompatActivity() {
                     extractedQrBitmap = qrBitmap
                     extractedRawData = barcodeData.rawData
                     extractedBarcodeFormat = barcodeData.barcodeFormat
+
+                    // Check for duplicate ticket
+                    if (checkForDuplicateAndAlert(barcodeData.rawData)) {
+                        return@launch
+                    }
+
                     displayPreview(qrBitmap)
                 } else {
                     Toast.makeText(
@@ -205,6 +211,12 @@ class AddTicketActivity : AppCompatActivity() {
                     extractedQrBitmap = qrBitmap
                     extractedRawData = barcodeData.rawData
                     extractedBarcodeFormat = barcodeData.barcodeFormat
+
+                    // Check for duplicate ticket
+                    if (checkForDuplicateAndAlert(barcodeData.rawData)) {
+                        return@launch
+                    }
+
                     displayPreview(qrBitmap)
                 } else {
                     Toast.makeText(
@@ -297,6 +309,51 @@ class AddTicketActivity : AppCompatActivity() {
     private fun displayPreview(qrBitmap: Bitmap) {
         // Display QR code
         qrCodePreview.setImageBitmap(qrBitmap)
+    }
+
+    /**
+     * Check if a ticket with this barcode already exists and alert the user
+     * Returns true if duplicate found (and activity should close), false otherwise
+     */
+    private suspend fun checkForDuplicateAndAlert(rawBarcodeData: String): Boolean {
+        val existingTicket = withContext(Dispatchers.IO) {
+            ticketRepository.findByBarcodeData(rawBarcodeData)
+        }
+
+        if (existingTicket != null) {
+            // Build ticket details for display
+            val details = buildString {
+                append("Name: ${existingTicket.userLabel}\n")
+
+                if (existingTicket.travelDate != null) {
+                    val dateFormat = SimpleDateFormat("d MMM yyyy", Locale.getDefault())
+                    append("Date: ${dateFormat.format(Date(existingTicket.travelDate))}\n")
+                }
+
+                if (existingTicket.originStationCode != null && existingTicket.destinationStationCode != null) {
+                    val originName = StationLookup.getStationName(existingTicket.originStationCode)
+                    val destName = StationLookup.getStationName(existingTicket.destinationStationCode)
+                    append("Journey: $originName → $destName\n")
+                }
+
+                val addedFormat = SimpleDateFormat("d MMM yyyy", Locale.getDefault())
+                append("Added: ${addedFormat.format(Date(existingTicket.addedAt))}")
+            }
+
+            // Show alert dialog
+            AlertDialog.Builder(this)
+                .setTitle("Ticket Already Exists")
+                .setMessage("This ticket is already saved:\n\n$details")
+                .setPositiveButton("OK") { _, _ ->
+                    finish()
+                }
+                .setCancelable(false)
+                .show()
+
+            return true
+        }
+
+        return false
     }
 
     private fun showNameDialog() {
