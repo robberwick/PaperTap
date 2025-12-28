@@ -60,7 +60,7 @@ class WaveShareHandler {
             }
         } catch (e: IOException) {
             failMsg = e.toString()
-            Log.v("WaveshareHandler, IO Exception", failMsg)
+            Log.v("WaveshareHandler", "IO Exception: $failMsg")
         }
 
         return object : FlashResult {
