@@ -89,6 +89,32 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- Image preview - 80% width, centered -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/previewImageWrapper"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_marginTop="16dp"
+                app:cardElevation="4dp"
+                app:cardCornerRadius="12dp"
+                app:strokeWidth="0dp"
+                app:cardBackgroundColor="?attr/colorSurfaceVariant"
+                app:layout_constraintWidth_percent="0.8"
+                app:layout_constraintDimensionRatio="1:1"
+                app:layout_constraintLeft_toLeftOf="parent"
+                app:layout_constraintRight_toRightOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/flasherTicketDetailsCard">
+
+                <ImageView
+                    android:id="@+id/previewImageView"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:contentDescription="@string/image_preview_content_description"
+                    android:padding="16dp"
+                    android:scaleType="fitCenter"
+                    app:srcCompat="@android:drawable/stat_sys_warning" />
+            </com.google.android.material.card.MaterialCardView>
+
             <!-- Status indicator -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/statusCard"
@@ -104,7 +130,7 @@
                 app:strokeWidth="0dp"
                 app:layout_constraintLeft_toLeftOf="parent"
                 app:layout_constraintRight_toRightOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/flasherTicketDetailsCard">
+                app:layout_constraintTop_toBottomOf="@id/previewImageWrapper">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -133,33 +159,6 @@
                         android:text="@string/status_tap_to_write" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
-
-            <!-- Image preview - 50% width, centered -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/previewImageWrapper"
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:layout_marginTop="16dp"
-                app:cardElevation="4dp"
-                app:cardCornerRadius="12dp"
-                app:strokeWidth="0dp"
-                app:cardBackgroundColor="?attr/colorSurfaceVariant"
-                app:layout_constraintWidth_percent="0.5"
-                app:layout_constraintDimensionRatio="1:1"
-                app:layout_constraintLeft_toLeftOf="parent"
-                app:layout_constraintRight_toRightOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/statusCard">
-
-                <ImageView
-                    android:id="@+id/previewImageView"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:contentDescription="@string/image_preview_content_description"
-                    android:padding="16dp"
-                    android:scaleType="fitCenter"
-                    app:srcCompat="@android:drawable/stat_sys_warning" />
-            </com.google.android.material.card.MaterialCardView>
-
 
         </androidx.constraintlayout.widget.ConstraintLayout>
     </ScrollView>

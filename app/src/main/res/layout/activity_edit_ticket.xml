@@ -35,99 +35,105 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <TextView
+            <!-- Ticket Details Card -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Edit Ticket"
-                android:textSize="24sp"
-                android:textStyle="bold"
-                android:textColor="?android:attr/textColorPrimary"
-                android:paddingBottom="16dp" />
+                app:cardBackgroundColor="?attr/colorSurfaceVariant"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp"
+                app:strokeWidth="0dp">
 
-            <!-- Name/Label Row -->
-            <LinearLayout
-                android:id="@+id/nameRow"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:paddingVertical="12dp"
-                android:gravity="center_vertical"
-                android:clickable="true"
-                android:focusable="true"
-                android:background="?attr/selectableItemBackground">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Name:"
-                    android:textSize="16sp"
-                    android:textColor="?android:attr/textColorPrimary" />
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
-                <TextView
-                    android:id="@+id/nameValue"
-                    android:layout_width="0dp"
-                    android:layout_weight="2"
-                    android:layout_height="wrap_content"
-                    android:text="Tap to set name"
-                    android:textSize="16sp"
-                    android:textAlignment="textEnd"
-                    android:textColor="?android:attr/textColorSecondary" />
+                    <!-- Name/Label Row -->
+                    <LinearLayout
+                        android:id="@+id/nameRow"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:paddingVertical="12dp"
+                        android:gravity="center_vertical"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="?attr/selectableItemBackground">
 
-            </LinearLayout>
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:text="Name:"
+                            android:textSize="16sp"
+                            android:textColor="?android:attr/textColorPrimary" />
 
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="?android:attr/listDivider" />
+                        <TextView
+                            android:id="@+id/nameValue"
+                            android:layout_width="0dp"
+                            android:layout_weight="2"
+                            android:layout_height="wrap_content"
+                            android:text="Tap to set name"
+                            android:textSize="16sp"
+                            android:textAlignment="textEnd"
+                            android:textColor="?android:attr/textColorSecondary" />
 
-            <!-- Date of Travel Row -->
-            <LinearLayout
-                android:id="@+id/dateRow"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:paddingVertical="12dp"
-                android:gravity="center_vertical"
-                android:clickable="true"
-                android:focusable="true"
-                android:background="?attr/selectableItemBackground">
+                    </LinearLayout>
 
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="wrap_content"
-                    android:text="Date of travel:"
-                    android:textSize="16sp"
-                    android:textColor="?android:attr/textColorPrimary" />
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="?android:attr/listDivider" />
 
-                <TextView
-                    android:id="@+id/dateValue"
-                    android:layout_width="0dp"
-                    android:layout_weight="2"
-                    android:layout_height="wrap_content"
-                    android:text="Tap to set date"
-                    android:textSize="16sp"
-                    android:textAlignment="textEnd"
-                    android:textColor="?android:attr/textColorSecondary" />
+                    <!-- Date of Travel Row -->
+                    <LinearLayout
+                        android:id="@+id/dateRow"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:paddingVertical="12dp"
+                        android:gravity="center_vertical"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="?attr/selectableItemBackground">
 
-            </LinearLayout>
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:text="Date of travel:"
+                            android:textSize="16sp"
+                            android:textColor="?android:attr/textColorPrimary" />
 
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="?android:attr/listDivider" />
+                        <TextView
+                            android:id="@+id/dateValue"
+                            android:layout_width="0dp"
+                            android:layout_weight="2"
+                            android:layout_height="wrap_content"
+                            android:text="Tap to set date"
+                            android:textSize="16sp"
+                            android:textAlignment="textEnd"
+                            android:textColor="?android:attr/textColorSecondary" />
 
-            <!-- Journey Row -->
-            <LinearLayout
-                android:id="@+id/journeyRow"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:paddingVertical="12dp"
-                android:clickable="true"
-                android:focusable="true"
-                android:background="?attr/selectableItemBackground">
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="?android:attr/listDivider" />
+
+                    <!-- Journey Row -->
+                    <LinearLayout
+                        android:id="@+id/journeyRow"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingVertical="12dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="?attr/selectableItemBackground">
 
                 <TextView
                     android:id="@+id/journeyPlaceholder"
@@ -205,7 +211,11 @@
 
                 </LinearLayout>
 
-            </LinearLayout>
+                    </LinearLayout>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
 
         </LinearLayout>
 

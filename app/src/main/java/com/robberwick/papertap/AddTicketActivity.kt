@@ -124,7 +124,6 @@ class AddTicketActivity : AppCompatActivity() {
         // Handle local file URIs
         val mimeType = contentResolver.getType(uri)
         android.util.Log.d("AddTicketActivity", "processDocument - MIME type: $mimeType")
-        Toast.makeText(this, "Processing document...", Toast.LENGTH_SHORT).show()
 
         lifecycleScope.launch {
             try {
@@ -193,7 +192,6 @@ class AddTicketActivity : AppCompatActivity() {
                 // Convert to URI and process as PDF
                 val fileUri = Uri.fromFile(tempFile)
                 android.util.Log.d("AddTicketActivity", "Processing downloaded PDF: $fileUri")
-                Toast.makeText(this@AddTicketActivity, "Processing ticket...", Toast.LENGTH_SHORT).show()
 
                 val result = withContext(Dispatchers.IO) {
                     processPdf(fileUri)
