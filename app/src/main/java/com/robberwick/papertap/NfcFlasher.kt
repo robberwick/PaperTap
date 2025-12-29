@@ -30,10 +30,10 @@ import com.google.android.material.card.MaterialCardView
 import androidx.lifecycle.lifecycleScope
 import com.robberwick.papertap.database.TicketEntity
 import com.robberwick.papertap.database.TicketRepository
+import com.robberwick.papertap.waveshare.WaveShareNfcWriter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import waveshare.feng.nfctag.activity.a
 import java.io.IOException
 import java.nio.charset.StandardCharsets
 import kotlin.math.sin
@@ -310,86 +310,101 @@ class NfcFlasher : AppCompatActivity() {
 
     private fun flashBitmap(tag: Tag, bitmap: Bitmap, screenSizeEnum: Int) {
         this.mIsFlashing = true
-        // val waveShareHandler = WaveShareHandler(this)
-        val a = a() // Create a new instance.
+        val writer = WaveShareNfcWriter()
         val nfcObj = NfcA.get(tag)
-        a.a(nfcObj) // Init
-        // Override WaveShare's SDK default of 700
-        nfcObj.timeout = 1200
         var errorString = ""
 
-        val t: Thread = object : Thread() {
-            //Create an new thread
-            override fun run() {
-                var success = false
-                val tntag: NfcA //NFC tag
-                //Create thread
-                val thread = Thread {
-                    var epdTotalProgress = 0
-                    while (epdTotalProgress != -1) {
-                        epdTotalProgress = a.c //Read the progress
+        val flashThread = Thread {
+            var success = false
+            var tntag: NfcA? = null
+
+            try {
+                // Initialize connection
+                if (!writer.connect(nfcObj)) {
+                    errorString = "Failed to initialize NFC connection"
+                    throw IOException(errorString)
+                }
+
+                // Progress monitoring thread
+                val progressThread = Thread {
+                    var progress = 0
+                    while (progress != -1 && progress < 100) {
+                        progress = writer.progress
                         runOnUiThread {
-                            updateProgressBar(epdTotalProgress)
+                            updateProgressBar(progress)
                         }
-                        if (epdTotalProgress == 100) {
-                            break
-                        }
+                        if (progress == 100) break
                         SystemClock.sleep(10)
                     }
                 }
-                thread.start() //start the thread
-                tntag = NfcA.get(tag) //Get the tag instance.
-                try {
-                    val whetherSucceed = a.a(screenSizeEnum, bitmap) //Send picture
-                    if (whetherSucceed == 1) {
-                        success = true
+                progressThread.start()
+
+                // Write bitmap to display
+                tntag = NfcA.get(tag)
+                val result = writer.writeBitmap(screenSizeEnum, bitmap)
+
+                success = (result == WaveShareNfcWriter.WriteResult.SUCCESS)
+
+                if (!success) {
+                    errorString = when (result) {
+                        WaveShareNfcWriter.WriteResult.DIMENSION_MISMATCH ->
+                            "Bitmap dimensions don't match display size"
+                        WaveShareNfcWriter.WriteResult.COMMUNICATION_ERROR ->
+                            "NFC communication error"
+                        else -> "Unknown error"
                     }
-                } catch (e: IOException) {
-                    errorString = e.toString()
-                } finally {
-                        try {
-                            // Need to run toast on main thread...
-                            runOnUiThread {
-                                if (!success) {
-                                    playErrorSound()
-                                    Toast.makeText(
-                                        applicationContext,
-                                        "FAILED to Flash :( $errorString",
-                                        Toast.LENGTH_LONG
-                                    ).show()
-                                } else {
-                                    playSuccessSound()
+                }
+            } catch (e: IOException) {
+                errorString = e.toString()
+                Log.e("NfcFlasher", "Flash failed with IOException", e)
+            } catch (e: Exception) {
+                errorString = e.toString()
+                Log.e("NfcFlasher", "Flash failed with exception", e)
+            } finally {
+                try {
+                    // Show result on main thread
+                    runOnUiThread {
+                        if (!success) {
+                            playErrorSound()
+                            Toast.makeText(
+                                applicationContext,
+                                "FAILED to Flash :( $errorString",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        } else {
+                            playSuccessSound()
 
-                                    // Record successful flash event
-                                    mTicketEntity?.let { ticket ->
-                                        lifecycleScope.launch {
-                                            withContext(Dispatchers.IO) {
-                                                ticketRepository.recordFlashEvent(ticket.id)
-                                            }
-                                        }
+                            // Record successful flash event
+                            mTicketEntity?.let { ticket ->
+                                lifecycleScope.launch {
+                                    withContext(Dispatchers.IO) {
+                                        ticketRepository.recordFlashEvent(ticket.id)
                                     }
-
-                                    Toast.makeText(
-                                        applicationContext,
-                                        "Success! Flashed display!",
-                                        Toast.LENGTH_LONG
-                                    ).show()
                                 }
                             }
-                            Log.v("Final success val", "Success = $success")
-                            tntag.close()
-                        } catch (e: IOException) { //handle exception error
-                            e.printStackTrace()
-                            Log.v("Flashing failed", "See trace above")
+
+                            Toast.makeText(
+                                applicationContext,
+                                "Success! Flashed display!",
+                                Toast.LENGTH_LONG
+                            ).show()
                         }
-                        Log.v("Tag closed", "Setting flash in progress = false")
-                        runOnUiThread {
-                            mIsFlashing = false
-                        }
+                    }
+
+                    Log.v("Flash result", "Success = $success")
+                    tntag?.close()
+                } catch (e: IOException) {
+                    e.printStackTrace()
+                    Log.e("NfcFlasher", "Error closing tag", e)
+                }
+
+                Log.v("Tag closed", "Setting flash in progress = false")
+                runOnUiThread {
+                    mIsFlashing = false
                 }
             }
         }
-        t.start() //Start thread
+        flashThread.start()
     }
 
     private fun enableForegroundDispatch() {
