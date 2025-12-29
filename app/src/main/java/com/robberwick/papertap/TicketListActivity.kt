@@ -313,6 +313,10 @@ class TicketListActivity : AppCompatActivity() {
                 startActivity(Intent(this, AboutActivity::class.java))
                 true
             }
+            R.id.action_manage_favorites -> {
+                startActivity(Intent(this, ManageFavoriteJourneysActivity::class.java))
+                true
+            }
             else -> super.onOptionsItemSelected(item)
         }
     }

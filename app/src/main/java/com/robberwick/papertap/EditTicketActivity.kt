@@ -15,6 +15,8 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.robberwick.papertap.database.TicketEntity
 import com.robberwick.papertap.database.TicketRepository
 import kotlinx.coroutines.Dispatchers
@@ -28,6 +30,7 @@ import java.util.Locale
 class EditTicketActivity : AppCompatActivity() {
 
     private lateinit var ticketRepository: TicketRepository
+    private lateinit var favoriteJourneyRepository: com.robberwick.papertap.database.FavoriteJourneyRepository
 
     private lateinit var nameValue: TextView
     private lateinit var dateValue: TextView
@@ -56,6 +59,7 @@ class EditTicketActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         ticketRepository = TicketRepository(this)
+        favoriteJourneyRepository = com.robberwick.papertap.database.FavoriteJourneyRepository(this)
 
         // Initialize StationLookup
         StationLookup.initialize(this)
@@ -223,75 +227,144 @@ class EditTicketActivity : AppCompatActivity() {
 
     private fun showJourneyDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_journey, null)
+
+        // Views
+        val tabLayout = dialogView.findViewById<com.google.android.material.tabs.TabLayout>(R.id.journeyTabs)
+        val favoritesContent = dialogView.findViewById<LinearLayout>(R.id.favoritesContent)
+        val searchContent = dialogView.findViewById<LinearLayout>(R.id.searchContent)
+        val favoritesRecyclerView = dialogView.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.favoritesRecyclerView)
+        val emptyFavoritesState = dialogView.findViewById<LinearLayout>(R.id.emptyFavoritesState)
         val originInput = dialogView.findViewById<AutoCompleteTextView>(R.id.originStationInput)
         val destInput = dialogView.findViewById<AutoCompleteTextView>(R.id.destinationStationInput)
+        val saveFavoriteButton = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.saveFavoriteButton)
 
-        // Setup adapters
-        val originAdapter = StationAdapter(this, StationLookup.getAllStations())
-        originInput.setAdapter(originAdapter)
+        // Setup station search adapters (same as before)
+        val stationAdapter = StationAdapter(this, StationLookup.getAllStations())
+        originInput.setAdapter(stationAdapter)
         originInput.threshold = 1
-
-        val destAdapter = StationAdapter(this, StationLookup.getAllStations())
-        destInput.setAdapter(destAdapter)
+        destInput.setAdapter(StationAdapter(this, StationLookup.getAllStations()))
         destInput.threshold = 1
 
-        // Pre-populate with current values if set
-        if (selectedOriginStation != null) {
-            originInput.setText(selectedOriginStation.toString(), false)
-        }
-        if (selectedDestinationStation != null) {
-            destInput.setText(selectedDestinationStation.toString(), false)
-        }
+        // Pre-fill if stations already selected
+        selectedOriginStation?.let { originInput.setText(it.toString(), false) }
+        selectedDestinationStation?.let { destInput.setText(it.toString(), false) }
 
-        // Track temporary selections
         var tempOrigin: Station? = selectedOriginStation
         var tempDest: Station? = selectedDestinationStation
 
-        // Handle origin station selection
         originInput.setOnItemClickListener { _, _, position, _ ->
-            tempOrigin = originAdapter.getItem(position)
+            tempOrigin = stationAdapter.getItem(position)
+            updateSaveFavoriteButtonVisibility(tempOrigin, tempDest, saveFavoriteButton)
         }
 
-        // Handle text changes for origin station
-        originInput.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) {
-                val query = s?.toString() ?: ""
-                if (query.isEmpty()) {
-                    tempOrigin = null
-                } else {
-                    val matchedStation = StationLookup.getAllStations().find { it.toString() == query }
-                    if (matchedStation == null) {
-                        tempOrigin = null
-                    }
-                }
-            }
-        })
-
-        // Handle destination station selection
         destInput.setOnItemClickListener { _, _, position, _ ->
-            tempDest = destAdapter.getItem(position)
+            tempDest = (destInput.adapter as StationAdapter).getItem(position)
+            updateSaveFavoriteButtonVisibility(tempOrigin, tempDest, saveFavoriteButton)
         }
 
-        // Handle text changes for destination station
-        destInput.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) {
-                val query = s?.toString() ?: ""
-                if (query.isEmpty()) {
-                    tempDest = null
-                } else {
-                    val matchedStation = StationLookup.getAllStations().find { it.toString() == query }
-                    if (matchedStation == null) {
-                        tempDest = null
+        // Setup favorites RecyclerView
+        val favoriteAdapter = FavoriteJourneyAdapter(
+            onFavoriteClick = { favorite ->
+                // Select this favorite
+                tempOrigin = Station(favorite.originStationCode,
+                    StationLookup.getStationName(favorite.originStationCode) ?: favorite.originStationCode)
+                tempDest = Station(favorite.destinationStationCode,
+                    StationLookup.getStationName(favorite.destinationStationCode) ?: favorite.destinationStationCode)
+
+                // Record usage
+                lifecycleScope.launch {
+                    favoriteJourneyRepository.recordUsage(favorite.id)
+                }
+
+                // Apply selection and close dialog
+                selectedOriginStation = tempOrigin
+                selectedDestinationStation = tempDest
+                updateJourneyDisplay()
+                (dialogView.parent as? AlertDialog)?.dismiss()
+            },
+            onSwapClick = { favorite ->
+                // Reverse direction
+                tempOrigin = Station(favorite.destinationStationCode,
+                    StationLookup.getStationName(favorite.destinationStationCode) ?: favorite.destinationStationCode)
+                tempDest = Station(favorite.originStationCode,
+                    StationLookup.getStationName(favorite.originStationCode) ?: favorite.originStationCode)
+
+                // Record usage
+                lifecycleScope.launch {
+                    favoriteJourneyRepository.recordUsage(favorite.id)
+                }
+
+                // Apply selection and close dialog
+                selectedOriginStation = tempOrigin
+                selectedDestinationStation = tempDest
+                updateJourneyDisplay()
+                (dialogView.parent as? AlertDialog)?.dismiss()
+            }
+        )
+
+        favoritesRecyclerView.apply {
+            adapter = favoriteAdapter
+            layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this@EditTicketActivity)
+        }
+
+        // Observe favorites
+        var favoritesCount = 0
+        favoriteJourneyRepository.allFavorites.observe(this) { favorites ->
+            favoriteAdapter.submitList(favorites)
+            favoritesCount = favorites.size
+
+            if (favorites.isEmpty()) {
+                favoritesRecyclerView.visibility = View.GONE
+                emptyFavoritesState.visibility = View.VISIBLE
+            } else {
+                favoritesRecyclerView.visibility = View.VISIBLE
+                emptyFavoritesState.visibility = View.GONE
+            }
+        }
+
+        // Tab switching logic
+        tabLayout.addOnTabSelectedListener(object : com.google.android.material.tabs.TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: com.google.android.material.tabs.TabLayout.Tab?) {
+                when (tab?.position) {
+                    0 -> { // Favorites tab
+                        favoritesContent.visibility = View.VISIBLE
+                        searchContent.visibility = View.GONE
+                    }
+                    1 -> { // Search tab
+                        favoritesContent.visibility = View.GONE
+                        searchContent.visibility = View.VISIBLE
                     }
                 }
             }
+            override fun onTabUnselected(tab: com.google.android.material.tabs.TabLayout.Tab?) {}
+            override fun onTabReselected(tab: com.google.android.material.tabs.TabLayout.Tab?) {}
         })
 
-        AlertDialog.Builder(this)
+        // Default to Favorites tab if user has favorites, otherwise Search tab
+        lifecycleScope.launch {
+            val count = favoriteJourneyRepository.getFavoritesCount()
+            if (count > 0) {
+                tabLayout.selectTab(tabLayout.getTabAt(0)) // Favorites
+                favoritesContent.visibility = View.VISIBLE
+                searchContent.visibility = View.GONE
+            } else {
+                tabLayout.selectTab(tabLayout.getTabAt(1)) // Search
+                favoritesContent.visibility = View.GONE
+                searchContent.visibility = View.VISIBLE
+            }
+        }
+
+        // Save favorite button click
+        saveFavoriteButton.setOnClickListener {
+            tempOrigin?.let { origin ->
+                tempDest?.let { dest ->
+                    showSaveFavoriteDialog(origin.code, dest.code)
+                }
+            }
+        }
+
+        // Show dialog
+        val dialog = AlertDialog.Builder(this)
             .setTitle("Journey")
             .setView(dialogView)
             .setPositiveButton("Set") { _, _ ->
@@ -323,51 +396,62 @@ class EditTicketActivity : AppCompatActivity() {
         }
     }
 
-    private class StationAdapter(context: android.content.Context, stations: List<Station>) :
-        ArrayAdapter<Station>(context, android.R.layout.simple_dropdown_item_1line, stations) {
+    private fun updateSaveFavoriteButtonVisibility(
+        origin: Station?,
+        dest: Station?,
+        button: com.google.android.material.button.MaterialButton
+    ) {
+        button.visibility = if (origin != null && dest != null) {
+            View.VISIBLE
+        } else {
+            View.GONE
+        }
+    }
 
-        private val allStations = stations
-        private var filteredStations = stations
+    private fun showSaveFavoriteDialog(originCode: String, destCode: String) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_save_favorite, null)
+        val labelInput = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(
+            R.id.favoriteLabelInput
+        )
+        val warningText = dialogView.findViewById<TextView>(R.id.favoriteCountWarning)
 
-        override fun getCount(): Int = filteredStations.size
+        // Pre-fill with default label
+        val defaultLabel = favoriteJourneyRepository.generateDefaultLabel(originCode, destCode)
+        labelInput.setText(defaultLabel)
+        labelInput.selectAll()
 
-        override fun getItem(position: Int): Station = filteredStations[position]
-
-        override fun getFilter(): android.widget.Filter {
-            return object : android.widget.Filter() {
-                override fun performFiltering(constraint: CharSequence?): FilterResults {
-                    val results = FilterResults()
-
-                    if (constraint.isNullOrBlank()) {
-                        results.values = allStations
-                        results.count = allStations.size
-                    } else {
-                        val query = constraint.toString().lowercase()
-                        val filtered = allStations.filter { station ->
-                            station.code.lowercase().contains(query) ||
-                            station.name.lowercase().contains(query)
-                        }
-                        results.values = filtered
-                        results.count = filtered.size
-                    }
-
-                    return results
-                }
-
-                @Suppress("UNCHECKED_CAST")
-                override fun publishResults(constraint: CharSequence?, results: FilterResults?) {
-                    filteredStations = (results?.values as? List<Station>) ?: emptyList()
-                    if (results?.count ?: 0 > 0) {
-                        notifyDataSetChanged()
-                    } else {
-                        notifyDataSetInvalidated()
-                    }
-                }
-
-                override fun convertResultToString(resultValue: Any?): CharSequence {
-                    return (resultValue as? Station)?.toString() ?: ""
-                }
+        lifecycleScope.launch {
+            val count = favoriteJourneyRepository.getFavoritesCount()
+            if (count >= 50) {
+                warningText.visibility = View.VISIBLE
             }
         }
+
+        AlertDialog.Builder(this)
+            .setTitle("Save as favorite")
+            .setView(dialogView)
+            .setPositiveButton("Save") { _, _ ->
+                val label = labelInput.text?.toString()?.trim() ?: defaultLabel
+
+                lifecycleScope.launch {
+                    val count = favoriteJourneyRepository.getFavoritesCount()
+                    if (count >= 50) {
+                        Toast.makeText(
+                            this@EditTicketActivity,
+                            "Maximum 50 favorites. Delete old favorites to add more.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    } else {
+                        favoriteJourneyRepository.insertFavorite(originCode, destCode, label)
+                        Toast.makeText(
+                            this@EditTicketActivity,
+                            "Favorite saved",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 }

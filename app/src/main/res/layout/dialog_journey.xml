@@ -3,40 +3,142 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:orientation="vertical">
 
-    <com.google.android.material.textfield.TextInputLayout
+    <!-- TabLayout for switching between Favorites and Search -->
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/journeyTabs"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Origin station"
-        app:helperText="Search by station name or code"
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+        app:tabMode="fixed"
+        app:tabGravity="fill"
+        android:background="?attr/colorSurface">
 
-        <AutoCompleteTextView
-            android:id="@+id/originStationInput"
-            android:layout_width="match_parent"
+        <com.google.android.material.tabs.TabItem
+            android:id="@+id/favoritesTab"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:inputType="textCapWords"
-            android:imeOptions="actionNext" />
+            android:text="Favorites" />
 
-    </com.google.android.material.textfield.TextInputLayout>
+        <com.google.android.material.tabs.TabItem
+            android:id="@+id/searchTab"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Search Stations" />
+    </com.google.android.material.tabs.TabLayout>
 
-    <com.google.android.material.textfield.TextInputLayout
+    <!-- Container that switches between two layouts -->
+    <FrameLayout
+        android:id="@+id/tabContentContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:hint="Destination station"
-        app:helperText="Search by station name or code"
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+        android:minHeight="300dp">
 
-        <AutoCompleteTextView
-            android:id="@+id/destinationStationInput"
+        <!-- FAVORITES TAB CONTENT -->
+        <LinearLayout
+            android:id="@+id/favoritesContent"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="textCapWords"
-            android:imeOptions="actionDone" />
+            android:orientation="vertical"
+            android:padding="8dp"
+            android:visibility="visible">
 
-    </com.google.android.material.textfield.TextInputLayout>
+            <!-- RecyclerView for favorites list -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/favoritesRecyclerView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxHeight="400dp"
+                android:scrollbars="vertical" />
+
+            <!-- Empty state -->
+            <LinearLayout
+                android:id="@+id/emptyFavoritesState"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:padding="32dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="No favorite journeys yet"
+                    android:textSize="16sp"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Search for stations and save your first journey"
+                    android:textSize="14sp"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:textAlignment="center"
+                    android:gravity="center" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- SEARCH TAB CONTENT -->
+        <LinearLayout
+            android:id="@+id/searchContent"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:visibility="gone">
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Origin station"
+                app:helperText="Search by station name or code"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+
+                <AutoCompleteTextView
+                    android:id="@+id/originStationInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textCapWords"
+                    android:imeOptions="actionNext" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:hint="Destination station"
+                app:helperText="Search by station name or code"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+
+                <AutoCompleteTextView
+                    android:id="@+id/destinationStationInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textCapWords"
+                    android:imeOptions="actionDone" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Save as favorite button (appears when both stations selected) -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/saveFavoriteButton"
+                style="@style/Widget.Material3.Button.TextButton.Icon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:layout_marginTop="8dp"
+                android:text="Save as favorite"
+                android:visibility="gone"
+                app:icon="@drawable/ic_star_border" />
+
+        </LinearLayout>
+
+    </FrameLayout>
 
 </LinearLayout>

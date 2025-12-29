@@ -5,9 +5,10 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [TicketEntity::class], version = 5, exportSchema = false)
+@Database(entities = [TicketEntity::class, FavoriteJourneyEntity::class], version = 6, exportSchema = false)
 abstract class TicketDatabase : RoomDatabase() {
     abstract fun ticketDao(): TicketDao
+    abstract fun favoriteJourneyDao(): FavoriteJourneyDao
 
     companion object {
         @Volatile

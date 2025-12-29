@@ -11,4 +11,9 @@
         android:title="About"
         android:icon="@android:drawable/ic_menu_info_details"
         app:showAsAction="never" />
+    <item
+        android:id="@+id/action_manage_favorites"
+        android:title="Favorite Journeys"
+        android:icon="@drawable/ic_star"
+        app:showAsAction="never" />
 </menu>

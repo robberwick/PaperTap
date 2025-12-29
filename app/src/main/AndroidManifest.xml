@@ -72,6 +72,11 @@
             android:label="@string/about_title"
             android:parentActivityName=".TicketListActivity" />
 
+        <!-- Manage Favorite Journeys Activity -->
+        <activity android:name=".ManageFavoriteJourneysActivity"
+            android:label="Favorite Journeys"
+            android:parentActivityName=".TicketListActivity" />
+
         <activity android:name="com.canhub.cropper.CropImageActivity"
             android:theme="@style/Base.Theme.AppCompat"/>
     </application>
