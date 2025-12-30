@@ -1,15 +1,16 @@
 # PaperTap
 
-**Display your e-ticket QR codes on passive NFC-powered e-ink displays.**
+**Manage and display your e-ticket barcodes on passive NFC-powered e-ink displays.**
 
-PaperTap is an Android application designed to extract QR codes from train tickets, event tickets, and other e-tickets, then write them to 1.54" WaveShare NFC e-paper displays. Perfect for keeping your tickets accessible without draining your phone battery.
+PaperTap is an Android application that extracts barcodes from train tickets, event tickets, and other e-tickets, stores them in a personal library, and writes them to WaveShare NFC e-paper displays. Perfect for keeping your tickets accessible without draining your phone battery.
 
 ## Why PaperTap?
 
-- **One-tap workflow**: Share a PDF ticket → QR code automatically extracted → Tap display to write
+- **Ticket library**: Build a collection of your tickets with custom labels and metadata
 - **Battery-free display**: The e-paper tag requires no power and lasts indefinitely
 - **Always scannable**: Works at ticket gates even when your phone is dead
-- **Ultra-focused**: Built specifically for the QR code ticket use case
+- **Flexible workflow**: Add tickets from PDFs, images, or direct URLs
+- **Organized travel**: Track origin/destination stations and travel dates
 
 ## Target Hardware
 
@@ -19,25 +20,61 @@ PaperTap is an Android application designed to extract QR codes from train ticke
 
 Get the display: [WaveShare 1.54" NFC E-Paper]
 
-[WaveShare 1.54" NFC E-Paper]: https://www.waveshare.com/1.54inch-nfc-powered-e-paper-bw.htm
+[WaveShare NFC E-Paper Products]: https://www.waveshare.com/product/displays/e-paper.htm
 
 ## Features
 
-✅ **Automatic QR detection** - ML Kit barcode scanning finds QR codes instantly  
-✅ **PDF support** - Direct sharing from email links or downloaded PDFs  
+### Barcode Detection & Storage
+✅ **Automatic barcode detection** - ML Kit finds QR codes, Aztec codes, Data Matrix, and PDF417 barcodes  
+✅ **PDF support** - Share from email, browser, or file manager  
 ✅ **Image support** - Works with screenshots, photos, or gallery images  
-✅ **Crisp output** - Threshold-based processing ensures QR codes scan reliably  
+✅ **URL downloads** - Share PDF links directly from browsers  
+✅ **Ticket library** - Store multiple tickets with custom labels  
+✅ **Duplicate detection** - Alerts you if a ticket is already saved
+
+### Metadata & Organization
+✅ **Station autocomplete** - Search and select origin/destination stations  
+✅ **Travel dates** - Associate travel dates with tickets  
+✅ **Custom labels** - Name your tickets for easy identification  
+✅ **Favorite journeys** - Save frequently used station pairs for quick selection  
+✅ **Ticket editing** - Update labels, stations, and dates anytime
+
+### Display & Writing
+✅ **Multiple barcode formats** - Supports QR Code, Aztec, Data Matrix, PDF417  
+✅ **Multiple display sizes** - Various WaveShare e-paper formats supported  
+✅ **Crisp output** - Pure black/white rendering for reliable scanning  
+✅ **Configurable padding** - Adjust barcode margins via settings  
 ✅ **Audio feedback** - Distinct sounds for start, success, and errors  
-✅ **Configurable padding** - Adjust QR code margins via settings  
-✅ **Quick reflash** - One-tap button to rewrite your last ticket  
+✅ **Quick reflash** - Tap any ticket to write to display
+
+### Management
+✅ **Swipe to delete** - Remove tickets with undo option  
+✅ **Long-press to edit** - Quick access to ticket metadata editor
 
 ## How It Works
 
-1. **Get your ticket** - Receive email with PDF link or download the PDF
-2. **Share to PaperTap** - Tap "Share" in your browser/file app, select PaperTap
-3. **Auto-extraction** - App detects and extracts the QR code automatically
-4. **Tap to write** - Hold your phone to the e-paper display
-5. **Done** - Hear success sound, ticket is now on the display
+### Adding a Ticket
+
+1. **Get your ticket** - Receive email with PDF link or download the PDF/image
+2. **Share to PaperTap** - Tap "Share" in your browser/file app and select PaperTap
+   - Or open PaperTap and tap the + button to pick a file
+3. **Barcode extraction** - App automatically detects and extracts the barcode
+4. **Add metadata** (optional) - Enter custom label, select stations, set travel date
+5. **Save** - Ticket is added to your library
+
+### Writing to Display
+
+1. **Select ticket** - Tap any ticket in your library
+2. **Tap NFC display** - Hold your phone to the e-paper tag
+3. **Wait for audio** - Success sound confirms write is complete
+4. **Done** - Your ticket is now displayed and scannable
+
+### Managing Tickets
+
+- **Edit**: Long-press any ticket to update its metadata
+- **Delete**: Swipe left on a ticket (with undo option)
+- **Reflash**: Simply tap a ticket to write it again
+- **Favorites**: Save common station pairs for faster ticket entry
 
 ## Building & Installation
 
@@ -72,8 +109,9 @@ Transfer the `app-debug.apk` to your Android device and install it. You'll need 
 
 Access via the menu (⋮) in the top-right corner:
 
-- **Display Size**: Choose from supported WaveShare displays (defaults to 1.54")
-- **QR Code Padding**: Adjust white border around QR code (0-50 pixels)
+- **Display Size**: Choose from supported WaveShare displays (defaults to 1.54" 200×200)
+- **Barcode Padding**: Adjust white border around barcode (0-50 pixels)
+- **Favorite Journeys**: Manage saved station pairs (up to 50 favorites)
 
 ## Known Issues
 
@@ -84,24 +122,31 @@ Access via the menu (⋮) in the top-right corner:
 2. Re-tap the display to retry the write
 
 **NFC radio dying** - Some Android devices experience NFC chipset failures at the system level. This appears in logs as `android.os.DeadObjectException`. Toggle NFC off/on to recover.
+
 ## Technical Details
 
 **Built with:**
-- Kotlin + Android SDK
-- ML Kit Barcode Scanning for QR detection
+- Kotlin + Android SDK (API 21+, targets API 35)
+- Room database for ticket persistence
+- ML Kit Barcode Scanning for barcode detection (QR, Aztec, Data Matrix, PDF417)
+- ZXing for barcode generation and rendering
 - Android PdfRenderer for PDF processing
 - WaveShare NFC SDK for e-paper communication
 - Material Design 3 UI components
 
 **Key technologies:**
-- Threshold-based image processing for crisp QR codes
+- Room database with LiveData for reactive ticket management
+- ML Kit barcode scanning with multiple format support
+- ZXing barcode generation from stored raw data
+- Threshold-based image processing for crisp barcode rendering
 - Foreground NFC dispatch for tag interception
 - AudioTrack API for custom success/error sounds
 - Kotlin coroutines for async operations
+- Station code lookup with autocomplete search
 
 ## Project Origins
 
-PaperTap is a focused fork of [joshuatz/nfc-epaper-writer], which was itself adapted by [mk-fg] and [DevPika]. This version strips away general-purpose image editing features to create a streamlined tool specifically for e-ticket QR codes.
+PaperTap is a focused fork of [joshuatz/nfc-epaper-writer], which was itself adapted by [mk-fg] and [DevPika]. This version transforms the original single-image tool into a full ticket management system with barcode extraction, metadata tracking, and library organization.
 
 **Attribution chain:**
 - Copyright (c) 2025 Rob Berwick - PaperTap (focused e-ticket version)
