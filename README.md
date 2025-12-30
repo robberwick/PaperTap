@@ -20,11 +20,11 @@ PaperTap is an Android application that extracts barcodes from train tickets, ev
 
 Get the display: [WaveShare 1.54" NFC E-Paper]
 
-[WaveShare NFC E-Paper Products]: https://www.waveshare.com/product/displays/e-paper.htm
 
 ## Features
 
 ### Barcode Detection & Storage
+
 ✅ **Automatic barcode detection** - ML Kit finds QR codes, Aztec codes, Data Matrix, and PDF417 barcodes  
 ✅ **PDF support** - Share from email, browser, or file manager  
 ✅ **Image support** - Works with screenshots, photos, or gallery images  
@@ -33,6 +33,7 @@ Get the display: [WaveShare 1.54" NFC E-Paper]
 ✅ **Duplicate detection** - Alerts you if a ticket is already saved
 
 ### Metadata & Organization
+
 ✅ **Station autocomplete** - Search and select origin/destination stations  
 ✅ **Travel dates** - Associate travel dates with tickets  
 ✅ **Custom labels** - Name your tickets for easy identification  
@@ -40,16 +41,21 @@ Get the display: [WaveShare 1.54" NFC E-Paper]
 ✅ **Ticket editing** - Update labels, stations, and dates anytime
 
 ### Display & Writing
+
 ✅ **Multiple barcode formats** - Supports QR Code, Aztec, Data Matrix, PDF417  
 ✅ **Multiple display sizes** - Various WaveShare e-paper formats supported  
 ✅ **Crisp output** - Pure black/white rendering for reliable scanning  
 ✅ **Configurable padding** - Adjust barcode margins via settings  
 ✅ **Audio feedback** - Distinct sounds for start, success, and errors  
-✅ **Quick reflash** - Tap any ticket to write to display
+✅ **Quick reflash** - Tap any ticket to write to display  
+✅ **Display tracking** - See which display each ticket is currently on  
+✅ **Display management** - Label your displays for easy identification
 
 ### Management
+
 ✅ **Swipe to delete** - Remove tickets with undo option  
-✅ **Long-press to edit** - Quick access to ticket metadata editor
+✅ **Long-press to edit** - Quick access to ticket metadata editor  
+✅ **Manage displays** - Label, track, and organize your NFC displays
 
 ## How It Works
 
@@ -75,6 +81,17 @@ Get the display: [WaveShare 1.54" NFC E-Paper]
 - **Delete**: Swipe left on a ticket (with undo option)
 - **Reflash**: Simply tap a ticket to write it again
 - **Favorites**: Save common station pairs for faster ticket entry
+- **Track displays**: See which display(s) each ticket is currently on
+
+### Managing Displays
+
+- **Auto-registration**: Displays are automatically registered when first used
+- **Label displays**: Give your displays friendly names like "Home Badge" or "Work Display"
+- **Track usage**: See when each display was last used and how many times
+- **Clear labels**: Reset a display name back to its hex UID
+- **Delete displays**: Remove displays you no longer use
+
+Access display management via Settings → Manage Displays
 
 ## Building & Installation
 
@@ -112,12 +129,14 @@ Access via the menu (⋮) in the top-right corner:
 - **Display Size**: Choose from supported WaveShare displays (defaults to 1.54" 200×200)
 - **Barcode Padding**: Adjust white border around barcode (0-50 pixels)
 - **Favorite Journeys**: Manage saved station pairs (up to 50 favorites)
+- **Manage Displays**: Label and track your NFC e-paper displays
 
 ## Known Issues
 
 **NFC can be finnicky** - Finding the right position and distance between your phone and the e-paper display may require some experimentation. Each phone's NFC antenna is positioned differently.
 
 **Corrupted writes** - Occasionally the NFC transfer can fail, resulting in visual noise on the display. If this happens:
+
 1. Toggle NFC off and back on in your phone's Quick Settings
 2. Re-tap the display to retry the write
 
@@ -126,6 +145,7 @@ Access via the menu (⋮) in the top-right corner:
 ## Technical Details
 
 **Built with:**
+
 - Kotlin + Android SDK (API 21+, targets API 35)
 - Room database for ticket persistence
 - ML Kit Barcode Scanning for barcode detection (QR, Aztec, Data Matrix, PDF417)
@@ -135,11 +155,14 @@ Access via the menu (⋮) in the top-right corner:
 - Material Design 3 UI components
 
 **Key technologies:**
+
 - Room database with LiveData for reactive ticket management
+- Many-to-many ticket-to-display relationship tracking
 - ML Kit barcode scanning with multiple format support
 - ZXing barcode generation from stored raw data
 - Threshold-based image processing for crisp barcode rendering
 - Foreground NFC dispatch for tag interception
+- Hex UID-based display identification
 - AudioTrack API for custom success/error sounds
 - Kotlin coroutines for async operations
 - Station code lookup with autocomplete search
@@ -149,6 +172,7 @@ Access via the menu (⋮) in the top-right corner:
 PaperTap is a focused fork of [joshuatz/nfc-epaper-writer], which was itself adapted by [mk-fg] and [DevPika]. This version transforms the original single-image tool into a full ticket management system with barcode extraction, metadata tracking, and library organization.
 
 **Attribution chain:**
+
 - Copyright (c) 2025 Rob Berwick - PaperTap (focused e-ticket version)
 - Copyright (c) 2024 harinworks - Fork updates
 - Copyright (c) 2024 mk-fg - Fork updates  
