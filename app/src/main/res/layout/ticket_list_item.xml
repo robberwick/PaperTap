@@ -47,6 +47,18 @@
             android:visibility="gone"
             app:layout_constraintTop_toBottomOf="@id/ticketJourney"
             app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <TextView
+            android:id="@+id/lastFlashedDisplayText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:textSize="12sp"
+            android:textColor="?android:attr/textColorSecondary"
+            android:layout_marginTop="4dp"
+            android:fontFamily="monospace"
+            app:layout_constraintTop_toBottomOf="@id/usageInfo"
+            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintBottom_toBottomOf="parent" />
 

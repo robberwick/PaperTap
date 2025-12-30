@@ -12,10 +12,16 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.color.MaterialColors
 import com.robberwick.papertap.database.TicketEntity
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class TicketAdapter(
     private val onTicketClick: (TicketEntity) -> Unit,
-    private val onTicketLongClick: ((TicketEntity) -> Unit)? = null
+    private val onTicketLongClick: ((TicketEntity) -> Unit)? = null,
+    private val displayRepository: com.robberwick.papertap.database.DisplayRepository,
+    private val ticketRepository: com.robberwick.papertap.database.TicketRepository
 ) : ListAdapter<TicketEntity, TicketAdapter.TicketViewHolder>(TicketDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TicketViewHolder {
@@ -34,7 +40,7 @@ class TicketAdapter(
 
         val isMostRecent = mostRecentTicket != null && ticket.id == mostRecentTicket.id
 
-        holder.bind(ticket, isMostRecent, onTicketClick, onTicketLongClick)
+        holder.bind(ticket, isMostRecent, onTicketClick, onTicketLongClick, displayRepository, ticketRepository)
     }
 
     fun getTicketAt(position: Int): TicketEntity {
@@ -46,8 +52,16 @@ class TicketAdapter(
         private val dateTimeText: TextView = itemView.findViewById(R.id.ticketDateTime)
         private val journeyText: TextView = itemView.findViewById(R.id.ticketJourney)
         private val usageInfoText: TextView = itemView.findViewById(R.id.usageInfo)
+        private val lastFlashedDisplayText: TextView = itemView.findViewById(R.id.lastFlashedDisplayText)
 
-        fun bind(ticket: TicketEntity, isMostRecent: Boolean, onTicketClick: (TicketEntity) -> Unit, onTicketLongClick: ((TicketEntity) -> Unit)?) {
+        fun bind(
+            ticket: TicketEntity, 
+            isMostRecent: Boolean, 
+            onTicketClick: (TicketEntity) -> Unit, 
+            onTicketLongClick: ((TicketEntity) -> Unit)?,
+            displayRepository: com.robberwick.papertap.database.DisplayRepository,
+            ticketRepository: com.robberwick.papertap.database.TicketRepository
+        ) {
             // Show label as primary text
             journeyText.text = ticket.userLabel
 
@@ -119,6 +133,43 @@ class TicketAdapter(
                 usageInfoText.visibility = View.VISIBLE
             } else {
                 usageInfoText.visibility = View.GONE
+            }
+
+            // Show display info (many-to-many)
+            CoroutineScope(Dispatchers.IO).launch {
+                val displayUids = ticketRepository.getDisplayUidsForTicket(ticket.id)
+                
+                val displayText = when (displayUids.size) {
+                    0 -> "Not yet flashed"
+                    1 -> {
+                        // Single display - show label or UID
+                        val display = displayRepository.getByUid(displayUids[0])
+                        val displayName = display?.userLabel ?: displayUids[0]
+                        "On display: $displayName"
+                    }
+                    else -> {
+                        // Multiple displays - show labels or count
+                        val displayNames = displayUids.mapNotNull { uid ->
+                            displayRepository.getByUid(uid)?.userLabel ?: uid
+                        }
+                        if (displayNames.all { it.startsWith("UID:") }) {
+                            // All are hex UIDs - just show count
+                            "On displays: ${displayUids.size} displays"
+                        } else {
+                            // Show labels (max 2, then ellipsis)
+                            val labels = displayNames.take(2).joinToString(", ")
+                            if (displayNames.size > 2) {
+                                "On displays: $labels, +${displayNames.size - 2} more"
+                            } else {
+                                "On displays: $labels"
+                            }
+                        }
+                    }
+                }
+                
+                withContext(Dispatchers.Main) {
+                    lastFlashedDisplayText.text = displayText
+                }
             }
 
             itemView.setOnClickListener {

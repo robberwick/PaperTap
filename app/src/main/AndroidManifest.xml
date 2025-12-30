@@ -84,6 +84,11 @@
             android:label="Favorite Journeys"
             android:parentActivityName=".TicketListActivity" />
 
+        <!-- Manage Displays Activity -->
+        <activity android:name=".ManageDisplaysActivity"
+            android:label="Displays"
+            android:parentActivityName=".TicketListActivity" />
+
         <activity android:name="com.canhub.cropper.CropImageActivity"
             android:theme="@style/Base.Theme.AppCompat"/>
     </application>

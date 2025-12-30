@@ -54,6 +54,7 @@ class TicketListActivity : AppCompatActivity() {
 
         // Initialize repository
         ticketRepository = TicketRepository(this)
+        val displayRepository = com.robberwick.papertap.database.DisplayRepository(this)
 
         // Setup RecyclerView
         recyclerView = findViewById(R.id.ticketsRecyclerView)
@@ -71,7 +72,9 @@ class TicketListActivity : AppCompatActivity() {
                 val intent = Intent(this, EditTicketActivity::class.java)
                 intent.putExtra("TICKET_ID", ticket.id)
                 startActivity(intent)
-            }
+            },
+            displayRepository = displayRepository,
+            ticketRepository = ticketRepository
         )
 
         recyclerView.apply {
@@ -104,6 +107,12 @@ class TicketListActivity : AppCompatActivity() {
         android.util.Log.d("TicketListActivity", "onCreate - About to handle incoming intent")
         android.util.Log.d("TicketListActivity", "onCreate - Intent action: ${intent.action}")
         handleIncomingIntent(intent)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Force adapter to rebind to pick up display label changes
+        ticketAdapter.notifyDataSetChanged()
     }
 
     override fun onNewIntent(intent: Intent?) {
@@ -315,6 +324,10 @@ class TicketListActivity : AppCompatActivity() {
             }
             R.id.action_manage_favorites -> {
                 startActivity(Intent(this, ManageFavoriteJourneysActivity::class.java))
+                true
+            }
+            R.id.action_manage_displays -> {
+                startActivity(Intent(this, ManageDisplaysActivity::class.java))
                 true
             }
             else -> super.onOptionsItemSelected(item)

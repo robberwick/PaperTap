@@ -6,6 +6,7 @@ import org.json.JSONArray
 
 class TicketRepository(context: Context) {
     private val ticketDao = TicketDatabase.getDatabase(context).ticketDao()
+    private val mappingDao = TicketDatabase.getDatabase(context).ticketDisplayMappingDao()
 
     val allTickets: LiveData<List<TicketEntity>> = ticketDao.getAllTickets()
 
@@ -116,5 +117,44 @@ class TicketRepository(context: Context) {
         val ticket = ticketDao.getById(ticketId) ?: return
         val updatedTicket = ticket.copy(isFavorite = !ticket.isFavorite)
         ticketDao.update(updatedTicket)
+    }
+
+    /**
+     * Add a display to a ticket's list of displays.
+     * IMPORTANT: This enforces the one-ticket-per-display constraint by removing 
+     * the display from all other tickets first.
+     */
+    suspend fun addDisplayToTicket(ticketId: Long, displayUid: String) {
+        // 1. Remove this display from all other tickets (enforce one-ticket-per-display)
+        mappingDao.removeDisplayFromOtherTickets(displayUid, ticketId)
+        
+        // 2. Add/update the mapping for current ticket
+        val mapping = TicketDisplayMapping(
+            ticketId = ticketId,
+            displayUid = displayUid,
+            flashedAt = System.currentTimeMillis()
+        )
+        mappingDao.insert(mapping)
+    }
+
+    /**
+     * Get all display UIDs for a ticket
+     */
+    suspend fun getDisplayUidsForTicket(ticketId: Long): List<String> {
+        return mappingDao.getDisplayUidsForTicket(ticketId)
+    }
+
+    /**
+     * Clear all displays from a ticket
+     */
+    suspend fun clearDisplaysForTicket(ticketId: Long) {
+        mappingDao.clearDisplaysForTicket(ticketId)
+    }
+
+    /**
+     * Remove a specific display from a ticket
+     */
+    suspend fun removeDisplayFromTicket(ticketId: Long, displayUid: String) {
+        mappingDao.removeMapping(ticketId, displayUid)
     }
 }

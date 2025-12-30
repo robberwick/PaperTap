@@ -41,6 +41,7 @@ import kotlin.math.sin
 class NfcFlasher : AppCompatActivity() {
     private var mTicketEntity: TicketEntity? = null
     private lateinit var ticketRepository: TicketRepository
+    private lateinit var displayRepository: com.robberwick.papertap.database.DisplayRepository
     private lateinit var statusText: TextView
     private lateinit var statusProgressIndicator: com.google.android.material.progressindicator.CircularProgressIndicator
 
@@ -83,6 +84,7 @@ class NfcFlasher : AppCompatActivity() {
     private var mProgressVal: Int = 0
     private var mBitmap: Bitmap? = null
     private var mImgFileUri: Uri? = null
+    private var mTagUid: String? = null // Store current tag UID for success handler
 
     // Note: Use of object expression / anon class is so `this` can be used
     // for reference to runnable (which would normally be off-limits)
@@ -114,6 +116,7 @@ class NfcFlasher : AppCompatActivity() {
 
         // Initialize repository
         ticketRepository = TicketRepository(this)
+        displayRepository = com.robberwick.papertap.database.DisplayRepository(this)
 
         // Initialize StationLookup
         StationLookup.initialize(this)
@@ -240,7 +243,19 @@ class NfcFlasher : AppCompatActivity() {
             } else {
                 intent.getParcelableExtra(NfcAdapter.EXTRA_TAG)!!
             }
-            val tagId = String(detectedTag.id, StandardCharsets.US_ASCII)
+            
+            // Extract hex UID from tag
+            val writer = WaveShareNfcWriter()
+            val tagUid = writer.getUidString(detectedTag)
+            if (tagUid == null) {
+                Log.e("NfcFlasher", "Failed to get UID from tag")
+                return
+            }
+            
+            // Store UID for later use in success handler
+            mTagUid = tagUid
+            Log.i("NfcFlasher", "Detected tag UID: $tagUid")
+            
             val tagTechList = detectedTag.techList
 
             // Do we still have a bitmap to flash?
@@ -254,16 +269,6 @@ class NfcFlasher : AppCompatActivity() {
             if (tagTechList[0] != "android.nfc.tech.NfcA") {
                 Log.v("Invalid tag type", "Found: ${tagTechList.joinToString()}")
                 return
-            }
-
-            // Do an explicit check for the ID. You may need to add the correct ID for your tag model.
-            if (tagId !in WaveShareUIDs) {
-                Log.v("Invalid tag ID", "$tagId not in " + WaveShareUIDs.joinToString(", "))
-                // Currently, this ID is sometimes coming back corrupted, so it is a unreliable check
-                // only enforce check if type != ndef, because in those cases we can't check AAR
-                if (intent.action != NfcAdapter.ACTION_NDEF_DISCOVERED) {
-                    return
-                }
             }
 
             // ACTION_NDEF_DISCOVERED has the filter applied for the AAR record *type*,
@@ -374,11 +379,24 @@ class NfcFlasher : AppCompatActivity() {
                         } else {
                             playSuccessSound()
 
-                            // Record successful flash event
+                            // Record successful flash event + update display tracking
                             mTicketEntity?.let { ticket ->
                                 lifecycleScope.launch {
                                     withContext(Dispatchers.IO) {
                                         ticketRepository.recordFlashEvent(ticket.id)
+                                        
+                                        // Update display tracking (many-to-many)
+                                        val currentTagUid = mTagUid
+                                        if (currentTagUid != null) {
+                                            // 1. Add this display to ticket's list (or update timestamp)
+                                            ticketRepository.addDisplayToTicket(ticket.id, currentTagUid)
+                                            
+                                            // 2. Auto-register display if new + record usage
+                                            displayRepository.getOrCreateDisplay(currentTagUid)
+                                            displayRepository.recordUsage(currentTagUid)
+                                            
+                                            Log.i("NfcFlasher", "Updated display tracking: ticket ${ticket.id} + $currentTagUid")
+                                        }
                                     }
                                 }
                             }
