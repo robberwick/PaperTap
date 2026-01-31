@@ -73,7 +73,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:text="Search for stations and save your first journey"
+                    android:text="Search for stations and save your journeys. Each saved journey can be selected in either direction."
                     android:textSize="14sp"
                     android:textColor="?android:attr/textColorSecondary"
                     android:textAlignment="center"

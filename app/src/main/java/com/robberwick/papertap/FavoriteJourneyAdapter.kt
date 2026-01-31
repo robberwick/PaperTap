@@ -33,10 +33,9 @@ class FavoriteJourneyAdapter(
     }
 
     class FavoriteViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val cardView: MaterialCardView = itemView as MaterialCardView
-        private val journeyRouteText: TextView = itemView.findViewById(R.id.journeyRoute)
+        private val forwardButton: MaterialButton = itemView.findViewById(R.id.forwardButton)
+        private val returnButton: MaterialButton = itemView.findViewById(R.id.returnButton)
         private val favoriteLabelText: TextView = itemView.findViewById(R.id.favoriteLabel)
-        private val swapButton: MaterialButton = itemView.findViewById(R.id.swapButton)
 
         fun bind(
             favorite: FavoriteJourneyEntity,
@@ -50,7 +49,9 @@ class FavoriteJourneyAdapter(
             val destName = StationLookup.getStationName(favorite.destinationStationCode)
                 ?: favorite.destinationStationCode
 
-            journeyRouteText.text = "$originName → $destName"
+            // Set button texts
+            forwardButton.text = "$originName → $destName"
+            returnButton.text = "$destName → $originName"
 
             // Show label only if it's different from the default route
             val defaultLabel = "$originName → $destName"
@@ -61,18 +62,19 @@ class FavoriteJourneyAdapter(
                 favoriteLabelText.visibility = View.GONE
             }
 
-            // Click handlers
-            itemView.setOnClickListener {
-                onFavoriteClick(favorite)
+            // Button click handlers
+            forwardButton.setOnClickListener {
+                onFavoriteClick(favorite)  // A→B direction
             }
 
+            returnButton.setOnClickListener {
+                onSwapClick(favorite)  // B→A direction
+            }
+
+            // Long-press handler (only used in ManageFavoriteJourneysActivity)
             itemView.setOnLongClickListener {
                 onFavoriteLongClick?.invoke(favorite)
                 true
-            }
-
-            swapButton.setOnClickListener {
-                onSwapClick(favorite)
             }
         }
     }

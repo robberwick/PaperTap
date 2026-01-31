@@ -10,52 +10,53 @@
     app:cardElevation="1dp"
     app:cardCornerRadius="8dp">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:orientation="vertical"
         android:padding="12dp">
 
-        <!-- Journey route (bold, primary text) -->
-        <TextView
-            android:id="@+id/journeyRoute"
-            android:layout_width="0dp"
+        <!-- Forward journey button (A → B) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/forwardButton"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:minHeight="48dp"
             android:textSize="16sp"
             android:textStyle="bold"
-            android:textColor="?android:attr/textColorPrimary"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/swapButton"
-            android:text="Hitchin → Cambridge" />
+            android:textAlignment="center"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:text="Cambridge → London" />
 
-        <!-- Label (smaller, secondary) -->
+        <!-- Return journey button (B → A) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/returnButton"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:minHeight="48dp"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textAlignment="center"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:text="London → Cambridge" />
+
+        <!-- Custom label (shown only if different from default) -->
         <TextView
             android:id="@+id/favoriteLabel"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
             android:textSize="14sp"
             android:textColor="?android:attr/textColorSecondary"
-            android:layout_marginTop="4dp"
+            android:textAlignment="center"
             android:visibility="gone"
-            app:layout_constraintTop_toBottomOf="@id/journeyRoute"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/swapButton"
-            app:layout_constraintBottom_toBottomOf="parent"
             android:text="Commute" />
 
-        <!-- Swap icon button -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/swapButton"
-            style="@style/Widget.Material3.Button.IconButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:contentDescription="Reverse journey direction"
-            app:icon="@drawable/ic_swap_horiz"
-            app:iconTint="?attr/colorPrimary"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
-
-    </androidx.constraintlayout.widget.ConstraintLayout>
+    </LinearLayout>
 
 </com.google.android.material.card.MaterialCardView>

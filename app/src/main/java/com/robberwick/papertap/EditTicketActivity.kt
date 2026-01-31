@@ -262,43 +262,57 @@ class EditTicketActivity : AppCompatActivity() {
             updateSaveFavoriteButtonVisibility(tempOrigin, tempDest, saveFavoriteButton)
         }
 
+        // Show dialog
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Journey")
+            .setView(dialogView)
+            .setPositiveButton("OK") { _, _ ->
+                selectedOriginStation = tempOrigin
+                selectedDestinationStation = tempDest
+                updateJourneyDisplay()
+            }
+            .setNegativeButton("Cancel", null)
+            .create()
+
+        dialog.show()
+
         // Setup favorites RecyclerView
         val favoriteAdapter = FavoriteJourneyAdapter(
             onFavoriteClick = { favorite ->
-                // Select this favorite
+                // Apply A→B selection
                 tempOrigin = Station(favorite.originStationCode,
                     StationLookup.getStationName(favorite.originStationCode) ?: favorite.originStationCode)
                 tempDest = Station(favorite.destinationStationCode,
                     StationLookup.getStationName(favorite.destinationStationCode) ?: favorite.destinationStationCode)
 
+                selectedOriginStation = tempOrigin
+                selectedDestinationStation = tempDest
+                updateJourneyDisplay()
+
                 // Record usage
                 lifecycleScope.launch {
                     favoriteJourneyRepository.recordUsage(favorite.id)
                 }
 
-                // Apply selection and close dialog
-                selectedOriginStation = tempOrigin
-                selectedDestinationStation = tempDest
-                updateJourneyDisplay()
-                (dialogView.parent as? AlertDialog)?.dismiss()
+                dialog.dismiss()
             },
             onSwapClick = { favorite ->
-                // Reverse direction
+                // Apply B→A selection (reversed)
                 tempOrigin = Station(favorite.destinationStationCode,
                     StationLookup.getStationName(favorite.destinationStationCode) ?: favorite.destinationStationCode)
                 tempDest = Station(favorite.originStationCode,
                     StationLookup.getStationName(favorite.originStationCode) ?: favorite.originStationCode)
 
+                selectedOriginStation = tempOrigin
+                selectedDestinationStation = tempDest
+                updateJourneyDisplay()
+
                 // Record usage
                 lifecycleScope.launch {
                     favoriteJourneyRepository.recordUsage(favorite.id)
                 }
 
-                // Apply selection and close dialog
-                selectedOriginStation = tempOrigin
-                selectedDestinationStation = tempDest
-                updateJourneyDisplay()
-                (dialogView.parent as? AlertDialog)?.dismiss()
+                dialog.dismiss()
             }
         )
 
@@ -322,6 +336,18 @@ class EditTicketActivity : AppCompatActivity() {
             }
         }
 
+        // Save favorite button click
+        saveFavoriteButton.setOnClickListener {
+            tempOrigin?.let { origin ->
+                tempDest?.let { dest ->
+                    showSaveFavoriteDialog(origin.code, dest.code)
+                }
+            }
+        }
+
+        // Get reference to positive button for dynamic visibility
+        val positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+
         // Tab switching logic
         tabLayout.addOnTabSelectedListener(object : com.google.android.material.tabs.TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: com.google.android.material.tabs.TabLayout.Tab?) {
@@ -329,10 +355,12 @@ class EditTicketActivity : AppCompatActivity() {
                     0 -> { // Favorites tab
                         favoritesContent.visibility = View.VISIBLE
                         searchContent.visibility = View.GONE
+                        positiveButton.visibility = View.GONE
                     }
                     1 -> { // Search tab
                         favoritesContent.visibility = View.GONE
                         searchContent.visibility = View.VISIBLE
+                        positiveButton.visibility = View.VISIBLE
                     }
                 }
             }
@@ -347,33 +375,14 @@ class EditTicketActivity : AppCompatActivity() {
                 tabLayout.selectTab(tabLayout.getTabAt(0)) // Favorites
                 favoritesContent.visibility = View.VISIBLE
                 searchContent.visibility = View.GONE
+                positiveButton.visibility = View.GONE
             } else {
                 tabLayout.selectTab(tabLayout.getTabAt(1)) // Search
                 favoritesContent.visibility = View.GONE
                 searchContent.visibility = View.VISIBLE
+                positiveButton.visibility = View.VISIBLE
             }
         }
-
-        // Save favorite button click
-        saveFavoriteButton.setOnClickListener {
-            tempOrigin?.let { origin ->
-                tempDest?.let { dest ->
-                    showSaveFavoriteDialog(origin.code, dest.code)
-                }
-            }
-        }
-
-        // Show dialog
-        val dialog = AlertDialog.Builder(this)
-            .setTitle("Journey")
-            .setView(dialogView)
-            .setPositiveButton("Set") { _, _ ->
-                selectedOriginStation = tempOrigin
-                selectedDestinationStation = tempDest
-                updateJourneyDisplay()
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
     }
 
     private fun updateJourneyDisplay() {
