@@ -52,6 +52,10 @@ class TicketListActivity : AppCompatActivity() {
         val overflowColor = typedValue.data
         toolbar.overflowIcon?.setTint(overflowColor)
 
+        // Initialize StationLookup (background load; other activities also call this,
+        // but the list screen may be the first activity in the process to need station names)
+        StationLookup.initialize(this)
+
         // Initialize repository
         ticketRepository = TicketRepository(this)
         val displayRepository = com.robberwick.papertap.database.DisplayRepository(this)
