@@ -274,10 +274,6 @@ class AddTicketActivity : AppCompatActivity() {
         private const val MAX_IMAGE_DIMENSION = 2_000
     }
 
-    private fun displayPreview(qrBitmap: Bitmap) {
-        // Display QR code
-        qrCodePreview.setImageBitmap(qrBitmap)
-    }
 
     /**
      * Check if a ticket with this barcode already exists and alert the user
