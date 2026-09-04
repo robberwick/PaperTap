@@ -31,7 +31,7 @@ object WaveShareTagValidator {
         } else {
             null
         }
-        if (uid !in WaveShareUIDs) {
+        if (uid == null || uid !in WaveShareUIDs) {
             return TagValidationResult.Rejected(
                 "This is not a supported WaveShare NFC display.",
             )
@@ -55,7 +55,8 @@ object WaveShareTagValidator {
         }
         return TagValidationResult.Valid(
             waveShareUid = uid,
-            trackingUid = "UID:" + uidBytes.joinToString(":") { byte -> "%02X".format(byte) },
+            trackingUid = "UID:" + uid.toByteArray(StandardCharsets.US_ASCII)
+                .joinToString(":") { byte -> "%02X".format(byte) },
         )
     }
 
