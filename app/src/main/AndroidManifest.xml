@@ -13,11 +13,11 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.NFCEInkWriter">
+        android:theme="@style/Theme.PaperTap">
         <!-- Ticket List Activity (Main/Launcher) -->
         <activity
             android:name=".TicketListActivity"
-            android:theme="@style/Theme.NFCEInkWriter.Splash"
+            android:theme="@style/Theme.PaperTap.Splash"
             android:launchMode="singleTop"
             android:exported="true">
             <intent-filter>

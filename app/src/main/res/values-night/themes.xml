@@ -1,6 +1,6 @@
 <resources>
     <!-- Base application theme - Material 3 Dark -->
-    <style name="Theme.NFCEInkWriter" parent="Theme.Material3.Dark.NoActionBar">
+    <style name="Theme.PaperTap" parent="Theme.Material3.Dark.NoActionBar">
         <!-- Primary brand color -->
         <item name="colorPrimary">@color/md_theme_primary</item>
         <item name="colorOnPrimary">@color/md_theme_onPrimary</item>
@@ -77,7 +77,7 @@
     </style>
 
     <!-- Splash Screen Theme - Night Mode -->
-    <style name="Theme.NFCEInkWriter.Splash" parent="Theme.SplashScreen">
+    <style name="Theme.PaperTap.Splash" parent="Theme.SplashScreen">
         <!-- Splash screen background color (primary blue) -->
         <item name="windowSplashScreenBackground">@color/md_theme_primary</item>
 
@@ -91,6 +91,6 @@
         <item name="windowSplashScreenAnimationDuration">300</item>
 
         <!-- Post-splash theme to apply -->
-        <item name="postSplashScreenTheme">@style/Theme.NFCEInkWriter</item>
+        <item name="postSplashScreenTheme">@style/Theme.PaperTap</item>
     </style>
 </resources>
