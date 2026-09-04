@@ -4,7 +4,6 @@ import com.robberwick.papertap.BuildConfig
 
 import android.graphics.Bitmap
 import android.graphics.Matrix
-import android.nfc.Tag
 import android.nfc.tech.NfcA
 import android.os.SystemClock
 import java.io.IOException
@@ -55,6 +54,16 @@ class WaveShareNfcWriter {
             false
         }
     }
+    fun close() {
+        val connection = nfcA
+        nfcA = null
+        try {
+            connection?.close()
+        } catch (e: IOException) {
+            if (BuildConfig.DEBUG) e.printStackTrace()
+        }
+    }
+
 
     /**
      * Write [bitmap] to [model]. The bitmap must match the selected model's
@@ -72,8 +81,6 @@ class WaveShareNfcWriter {
             success = if (model.protocol == DisplayModel.Protocol.ONE_54_B) {
                 writeDisplay154B(nfc, model, bitmap)
             } else {
-                // A4 moves this after tag validation/handshake in the next NFC-path cluster.
-                writeNdefRecord(nfc)
                 writeStandardDisplay(nfc, model, bitmap)
             }
 
@@ -96,55 +103,6 @@ class WaveShareNfcWriter {
         }
     }
 
-    /**
-     * Write NDEF record to tag for Android app association.
-     * This ensures the tag is recognized as a WaveShare tag.
-     */
-    private fun writeNdefRecord(nfc: NfcA) {
-        val currentRecord = ByteArray(48)
-
-        try {
-            // Read existing NDEF record (3 blocks of 16 bytes)
-            val block1 = nfc.transceive(byteArrayOf(0x30, 0x04))
-            System.arraycopy(block1, 0, currentRecord, 0, 16)
-
-            val block2 = nfc.transceive(byteArrayOf(0x30, 0x08))
-            System.arraycopy(block2, 0, currentRecord, 16, 16)
-
-            val block3 = nfc.transceive(byteArrayOf(0x30, 0x0C))
-            System.arraycopy(block3, 0, currentRecord, 32, 16)
-        } catch (e: IOException) {
-            if (BuildConfig.DEBUG) e.printStackTrace()
-        }
-
-        // Expected NDEF record with Android Application Record (AAR) pointing to WaveShare app
-        val expectedRecord = byteArrayOf(
-            0x03, 0x27, 0xD4.toByte(), 0x0F, 0x15, 0x61, 0x6E, 0x64, // NDEF header
-            0x72, 0x6F, 0x69, 0x64, 0x2E, 0x63, 0x6F, 0x6D, // "android.com"
-            0x3A, 0x70, 0x6B, 0x67, 0x77, 0x61, 0x76, 0x65, // ":pkgwave"
-            0x73, 0x68, 0x61, 0x72, 0x65, 0x2E, 0x66, 0x65, // "share.fe"
-            0x6E, 0x67, 0x2E, 0x6E, 0x66, 0x63, 0x74, 0x61, // "ng.nfcta"
-            0x67, 0xFE.toByte(), 0x00, 0x00, 0x00, 0x00, 0x00, 0x00  // "g" + terminator
-        )
-
-        // Only write if record doesn't match
-        if (!currentRecord.contentEquals(expectedRecord)) {
-            for (i in 0 until 11) {
-                try {
-                    val blockNum = (i + 4).toByte()
-                    val data = byteArrayOf(
-                        expectedRecord[i * 4],
-                        expectedRecord[i * 4 + 1],
-                        expectedRecord[i * 4 + 2],
-                        expectedRecord[i * 4 + 3]
-                    )
-                    nfc.transceive(byteArrayOf(0xA2.toByte(), blockNum, data[0], data[1], data[2], data[3]))
-                } catch (e: IOException) {
-                    if (BuildConfig.DEBUG) e.printStackTrace()
-                }
-            }
-        }
-    }
 
     /**
      * Standard WaveShare protocol, driven entirely by [DisplayModel]. Model
@@ -389,15 +347,17 @@ class WaveShareNfcWriter {
         if (!sendCommand(nfc, 0xCD.toByte(), 0x06)) return false
         SystemClock.sleep(1000)
 
-        // Wait for completion
-        while (true) {
+        // Wait for completion. proxmark3 caps this at 50 failed polls;
+        // never leave the writer, wake lock, and UI stuck forever.
+        repeat(51) {
             val response = nfc.transceive(byteArrayOf(0xCD.toByte(), 0x08))
-            if (response[0] == 0xFF.toByte() && response[1] == 0.toByte()) {
+            if (isSuccessResponse(response, first = 0xFF.toByte())) {
                 progress = 100
                 return true
             }
             SystemClock.sleep(500)
         }
+        return false
     }
 
     /** Pack bitmap pixels into the exact byte layout declared by [model]. */
@@ -481,31 +441,4 @@ class WaveShareNfcWriter {
         return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, false)
     }
 
-    /**
-     * Get UID string from NFC tag.
-     */
-    fun getUidString(tag: Tag): String? {
-        val uid = tag.id
-        if (uid == null || uid.isEmpty()) return null
-
-        val sb = StringBuilder("UID")
-        for (byte in uid) {
-            sb.append(":")
-            sb.append(String.format("%02X", byte))
-        }
-        return sb.toString()
-    }
-
-    companion object {
-        /**
-         * Find the null terminator in a byte array.
-         * @return index of first null byte, or array length if none found
-         */
-        fun findNullTerminator(array: ByteArray): Int {
-            for (i in array.indices) {
-                if (array[i] == 0.toByte()) return i
-            }
-            return array.size
-        }
-    }
 }
