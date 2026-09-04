@@ -39,7 +39,7 @@ class SettingsActivity : AppCompatActivity() {
             // Load preferences from XML
             setPreferencesFromResource(R.xml.preferences, rootKey)
 
-            android.util.Log.d("SettingsFragment", "Preferences configured to use file: ${Constants.Preference_File_Key}")
+            if (BuildConfig.DEBUG) android.util.Log.d("SettingsFragment", "Preferences configured to use file: ${Constants.Preference_File_Key}")
         }
     }
 }

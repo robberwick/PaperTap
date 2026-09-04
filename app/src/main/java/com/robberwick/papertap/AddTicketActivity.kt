@@ -61,7 +61,7 @@ class AddTicketActivity : AppCompatActivity() {
     private var selectedTravelDate: Long? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        android.util.Log.d("AddTicketActivity", "onCreate - Activity starting")
+        if (BuildConfig.DEBUG) android.util.Log.d("AddTicketActivity", "onCreate - Activity starting")
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_add_ticket)
 
@@ -101,10 +101,10 @@ class AddTicketActivity : AppCompatActivity() {
 
         // Get document URI from intent
         val documentUriString = intent.getStringExtra("DOCUMENT_URI")
-        android.util.Log.d("AddTicketActivity", "onCreate - DOCUMENT_URI: $documentUriString")
+        if (BuildConfig.DEBUG) android.util.Log.d("AddTicketActivity", "onCreate - DOCUMENT_URI: $documentUriString")
         if (documentUriString != null) {
             val uri = Uri.parse(documentUriString)
-            android.util.Log.d("AddTicketActivity", "onCreate - Parsed URI: $uri")
+            if (BuildConfig.DEBUG) android.util.Log.d("AddTicketActivity", "onCreate - Parsed URI: $uri")
             processDocument(uri)
         } else {
             android.util.Log.e("AddTicketActivity", "onCreate - No DOCUMENT_URI provided!")
@@ -114,12 +114,12 @@ class AddTicketActivity : AppCompatActivity() {
     }
 
     private fun processDocument(uri: Uri) {
-        android.util.Log.d("AddTicketActivity", "processDocument - URI: $uri")
-        android.util.Log.d("AddTicketActivity", "processDocument - URI scheme: ${uri.scheme}")
+        if (BuildConfig.DEBUG) android.util.Log.d("AddTicketActivity", "processDocument - URI: $uri")
+        if (BuildConfig.DEBUG) android.util.Log.d("AddTicketActivity", "processDocument - URI scheme: ${uri.scheme}")
 
         // Check if this is an HTTP/HTTPS URL (shared from Firefox)
         if (uri.scheme == "http" || uri.scheme == "https") {
-            android.util.Log.d("AddTicketActivity", "Detected HTTP/HTTPS URL, downloading...")
+            if (BuildConfig.DEBUG) android.util.Log.d("AddTicketActivity", "Detected HTTP/HTTPS URL, downloading...")
             Toast.makeText(this, "Downloading ticket...", Toast.LENGTH_SHORT).show()
             downloadAndProcessPdf(uri)
             return
@@ -127,7 +127,7 @@ class AddTicketActivity : AppCompatActivity() {
 
         // Handle local file URIs
         val mimeType = contentResolver.getType(uri)
-        android.util.Log.d("AddTicketActivity", "processDocument - MIME type: $mimeType")
+        if (BuildConfig.DEBUG) android.util.Log.d("AddTicketActivity", "processDocument - MIME type: $mimeType")
 
         lifecycleScope.launch {
             try {
@@ -162,7 +162,7 @@ class AddTicketActivity : AppCompatActivity() {
                     finish()
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                if (BuildConfig.DEBUG) e.printStackTrace()
                 Toast.makeText(
                     this@AddTicketActivity,
                     "Error processing document: ${e.message}",
@@ -179,7 +179,7 @@ class AddTicketActivity : AppCompatActivity() {
                 val tempFile = withContext(Dispatchers.IO) {
                     // Create a temporary file for the downloaded PDF
                     val tempFile = File.createTempFile("downloaded_ticket", ".pdf", cacheDir)
-                    android.util.Log.d("AddTicketActivity", "Downloading to: ${tempFile.absolutePath}")
+                    if (BuildConfig.DEBUG) android.util.Log.d("AddTicketActivity", "Downloading to: ${tempFile.absolutePath}")
 
                     // Download the PDF
                     val connection = java.net.URL(url.toString()).openConnection() as java.net.HttpURLConnection
@@ -195,13 +195,13 @@ class AddTicketActivity : AppCompatActivity() {
                         }
                     }
 
-                    android.util.Log.d("AddTicketActivity", "Download complete, file size: ${tempFile.length()} bytes")
+                    if (BuildConfig.DEBUG) android.util.Log.d("AddTicketActivity", "Download complete, file size: ${tempFile.length()} bytes")
                     tempFile
                 }
 
                 // Convert to URI and process as PDF
                 val fileUri = Uri.fromFile(tempFile)
-                android.util.Log.d("AddTicketActivity", "Processing downloaded PDF: $fileUri")
+                if (BuildConfig.DEBUG) android.util.Log.d("AddTicketActivity", "Processing downloaded PDF: $fileUri")
 
                 val result = withContext(Dispatchers.IO) {
                     processPdf(fileUri)
@@ -232,7 +232,7 @@ class AddTicketActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 android.util.Log.e("AddTicketActivity", "Error downloading/processing PDF", e)
-                e.printStackTrace()
+                if (BuildConfig.DEBUG) e.printStackTrace()
                 Toast.makeText(
                     this@AddTicketActivity,
                     "Error downloading ticket: ${e.message}",
@@ -305,7 +305,7 @@ class AddTicketActivity : AppCompatActivity() {
                 }
             }
             .addOnFailureListener { e ->
-                e.printStackTrace()
+                if (BuildConfig.DEBUG) e.printStackTrace()
                 continuation.resume(null)
             }
     }
@@ -626,7 +626,7 @@ class AddTicketActivity : AppCompatActivity() {
 
                 finish()
             } catch (e: Exception) {
-                e.printStackTrace()
+                if (BuildConfig.DEBUG) e.printStackTrace()
                 Toast.makeText(
                     this@AddTicketActivity,
                     "Error saving ticket: ${e.message}",

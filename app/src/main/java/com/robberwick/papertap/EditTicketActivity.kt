@@ -172,7 +172,7 @@ class EditTicketActivity : AppCompatActivity() {
                     Toast.makeText(this@EditTicketActivity, "Ticket not found", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                if (BuildConfig.DEBUG) e.printStackTrace()
                 Toast.makeText(
                     this@EditTicketActivity,
                     "Error updating ticket: ${e.message}",

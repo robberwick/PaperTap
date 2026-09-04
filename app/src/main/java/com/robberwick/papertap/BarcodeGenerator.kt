@@ -109,9 +109,9 @@ object BarcodeGenerator {
         edgePadding: Int = 0,
         labels: List<BarcodeLabel> = emptyList()
     ): Bitmap {
-        android.util.Log.d("BarcodeGenerator", "generateBarcodeWithLabel called")
-        android.util.Log.d("BarcodeGenerator", "  labels: $labels")
-        android.util.Log.d("BarcodeGenerator", "  width: $width, height: $height, edgePadding: $edgePadding")
+        if (BuildConfig.DEBUG) android.util.Log.d("BarcodeGenerator", "generateBarcodeWithLabel called")
+        if (BuildConfig.DEBUG) android.util.Log.d("BarcodeGenerator", "  labels: $labels")
+        if (BuildConfig.DEBUG) android.util.Log.d("BarcodeGenerator", "  width: $width, height: $height, edgePadding: $edgePadding")
 
         // Calculate available space after accounting for edge padding on all sides
         val availableWidth = width - (edgePadding * 2)
@@ -122,7 +122,7 @@ object BarcodeGenerator {
 
         // If no label text, generate plain barcode within padded area
         if (nonEmptyLabels.isEmpty()) {
-            android.util.Log.d("BarcodeGenerator", "  No labels, returning plain barcode")
+            if (BuildConfig.DEBUG) android.util.Log.d("BarcodeGenerator", "  No labels, returning plain barcode")
 
             // Keep barcode square
             val barcodeSize = minOf(availableWidth, availableHeight)
@@ -142,7 +142,7 @@ object BarcodeGenerator {
             return result
         }
 
-        android.util.Log.d("BarcodeGenerator", "  Adding ${nonEmptyLabels.size} label(s) to barcode")
+        if (BuildConfig.DEBUG) android.util.Log.d("BarcodeGenerator", "  Adding ${nonEmptyLabels.size} label(s) to barcode")
 
         // Calculate base text size (optimized for small metadata labels)
         val baseTextSizePx = (availableHeight / 10f).coerceAtLeast(14f)

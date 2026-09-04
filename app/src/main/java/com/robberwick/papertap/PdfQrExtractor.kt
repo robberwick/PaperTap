@@ -29,11 +29,11 @@ class PdfQrExtractor(private val context: Context) {
             }
 
             pdfRenderer = PdfRenderer(fileDescriptor)
-            Log.d(TAG, "PDF has ${pdfRenderer.pageCount} pages")
+            if (BuildConfig.DEBUG) Log.d(TAG, "PDF has ${pdfRenderer.pageCount} pages")
 
             // Scan all pages for QR code
             for (pageIndex in 0 until pdfRenderer.pageCount) {
-                Log.d(TAG, "Scanning page $pageIndex")
+                if (BuildConfig.DEBUG) Log.d(TAG, "Scanning page $pageIndex")
                 val page = pdfRenderer.openPage(pageIndex)
 
                 // Render page to bitmap at high resolution for better QR detection
@@ -48,18 +48,18 @@ class PdfQrExtractor(private val context: Context) {
                 // Try to find QR code in this page
                 val result = extractQrFromBitmap(bitmap, padding)
                 if (result != null) {
-                    Log.d(TAG, "QR code found on page $pageIndex")
+                    if (BuildConfig.DEBUG) Log.d(TAG, "QR code found on page $pageIndex")
                     return result
                 }
 
                 bitmap.recycle()
             }
 
-            Log.d(TAG, "No QR code found in any page")
+            if (BuildConfig.DEBUG) Log.d(TAG, "No QR code found in any page")
             return null
         } catch (e: Exception) {
             Log.e(TAG, "Error extracting QR from PDF", e)
-            e.printStackTrace()
+            if (BuildConfig.DEBUG) e.printStackTrace()
             return null
         } finally {
             pdfRenderer?.close()
@@ -80,18 +80,18 @@ class PdfQrExtractor(private val context: Context) {
         val scanner = BarcodeScanning.getClient(options)
         val image = InputImage.fromBitmap(bitmap, 0)
 
-        Log.d(TAG, "Starting barcode scan on bitmap ${bitmap.width}x${bitmap.height}")
+        if (BuildConfig.DEBUG) Log.d(TAG, "Starting barcode scan on bitmap ${bitmap.width}x${bitmap.height}")
 
         scanner.process(image)
             .addOnSuccessListener { barcodes ->
-                Log.d(TAG, "Scan complete. Found ${barcodes.size} barcodes")
+                if (BuildConfig.DEBUG) Log.d(TAG, "Scan complete. Found ${barcodes.size} barcodes")
 
                 if (barcodes.isNotEmpty()) {
                     val barcode = barcodes[0]
                     val boundingBox = barcode.boundingBox
                     val rawValue = barcode.rawValue
 
-                    Log.d(TAG, "Barcode format: ${barcode.format}, value: ${rawValue?.take(50)}")
+                    if (BuildConfig.DEBUG) Log.d(TAG, "Barcode format: ${barcode.format}, value: ${rawValue?.take(50)}")
 
                     if (rawValue == null) {
                         Log.w(TAG, "Barcode found but no raw value")
@@ -106,29 +106,29 @@ class PdfQrExtractor(private val context: Context) {
                     )
 
                     if (boundingBox != null) {
-                        Log.d(TAG, "Bounding box: $boundingBox")
+                        if (BuildConfig.DEBUG) Log.d(TAG, "Bounding box: $boundingBox")
                         // Use padding from settings
-                        Log.d(TAG, "Using padding: $padding pixels")
+                        if (BuildConfig.DEBUG) Log.d(TAG, "Using padding: $padding pixels")
                         val left = maxOf(0, boundingBox.left - padding)
                         val top = maxOf(0, boundingBox.top - padding)
                         val width = minOf(bitmap.width - left, boundingBox.width() + padding * 2)
                         val height = minOf(bitmap.height - top, boundingBox.height() + padding * 2)
 
                         val croppedBitmap = Bitmap.createBitmap(bitmap, left, top, width, height)
-                        Log.d(TAG, "Cropped bitmap: ${croppedBitmap.width}x${croppedBitmap.height}")
+                        if (BuildConfig.DEBUG) Log.d(TAG, "Cropped bitmap: ${croppedBitmap.width}x${croppedBitmap.height}")
                         continuation.resume(Pair(croppedBitmap, barcodeData))
                     } else {
                         Log.w(TAG, "Barcode found but no bounding box")
                         continuation.resume(null)
                     }
                 } else {
-                    Log.d(TAG, "No barcodes found")
+                    if (BuildConfig.DEBUG) Log.d(TAG, "No barcodes found")
                     continuation.resume(null)
                 }
             }
             .addOnFailureListener { e ->
                 Log.e(TAG, "Barcode scanning failed", e)
-                e.printStackTrace()
+                if (BuildConfig.DEBUG) e.printStackTrace()
                 continuation.resume(null)
             }
     }

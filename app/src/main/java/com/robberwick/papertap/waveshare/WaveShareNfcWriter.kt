@@ -1,5 +1,7 @@
 package com.robberwick.papertap.waveshare
 
+import com.robberwick.papertap.BuildConfig
+
 import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.nfc.Tag
@@ -49,7 +51,7 @@ class WaveShareNfcWriter {
             nfcA.timeout = 1200
             true
         } catch (e: IOException) {
-            e.printStackTrace()
+            if (BuildConfig.DEBUG) e.printStackTrace()
             false
         }
     }
@@ -88,7 +90,7 @@ class WaveShareNfcWriter {
                 WriteResult.COMMUNICATION_ERROR
             }
         } catch (e: IOException) {
-            e.printStackTrace()
+            if (BuildConfig.DEBUG) e.printStackTrace()
             progress = -1
             WriteResult.COMMUNICATION_ERROR
         }
@@ -112,7 +114,7 @@ class WaveShareNfcWriter {
             val block3 = nfc.transceive(byteArrayOf(0x30, 0x0C))
             System.arraycopy(block3, 0, currentRecord, 32, 16)
         } catch (e: IOException) {
-            e.printStackTrace()
+            if (BuildConfig.DEBUG) e.printStackTrace()
         }
 
         // Expected NDEF record with Android Application Record (AAR) pointing to WaveShare app
@@ -138,7 +140,7 @@ class WaveShareNfcWriter {
                     )
                     nfc.transceive(byteArrayOf(0xA2.toByte(), blockNum, data[0], data[1], data[2], data[3]))
                 } catch (e: IOException) {
-                    e.printStackTrace()
+                    if (BuildConfig.DEBUG) e.printStackTrace()
                 }
             }
         }
@@ -435,7 +437,7 @@ class WaveShareNfcWriter {
             val response = nfc.transceive(command)
             response[0] == 0.toByte() && response[1] == 0.toByte()
         } catch (e: IOException) {
-            e.printStackTrace()
+            if (BuildConfig.DEBUG) e.printStackTrace()
             false
         }
     }

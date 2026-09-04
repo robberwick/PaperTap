@@ -104,8 +104,8 @@ class TicketListActivity : AppCompatActivity() {
         }
 
         // Handle share intents
-        android.util.Log.d("TicketListActivity", "onCreate - About to handle incoming intent")
-        android.util.Log.d("TicketListActivity", "onCreate - Intent action: ${intent.action}")
+        if (BuildConfig.DEBUG) android.util.Log.d("TicketListActivity", "onCreate - About to handle incoming intent")
+        if (BuildConfig.DEBUG) android.util.Log.d("TicketListActivity", "onCreate - Intent action: ${intent.action}")
         handleIncomingIntent(intent)
     }
 
@@ -121,31 +121,31 @@ class TicketListActivity : AppCompatActivity() {
     }
 
     private fun handleIncomingIntent(intent: Intent) {
-        android.util.Log.d("TicketListActivity", "handleIncomingIntent - action: ${intent.action}")
-        android.util.Log.d("TicketListActivity", "handleIncomingIntent - type: ${intent.type}")
-        android.util.Log.d("TicketListActivity", "handleIncomingIntent - data: ${intent.data}")
-        android.util.Log.d("TicketListActivity", "handleIncomingIntent - extras: ${intent.extras?.keySet()?.joinToString()}")
+        if (BuildConfig.DEBUG) android.util.Log.d("TicketListActivity", "handleIncomingIntent - action: ${intent.action}")
+        if (BuildConfig.DEBUG) android.util.Log.d("TicketListActivity", "handleIncomingIntent - type: ${intent.type}")
+        if (BuildConfig.DEBUG) android.util.Log.d("TicketListActivity", "handleIncomingIntent - data: ${intent.data}")
+        if (BuildConfig.DEBUG) android.util.Log.d("TicketListActivity", "handleIncomingIntent - extras: ${intent.extras?.keySet()?.joinToString()}")
 
         when (intent.action) {
             Intent.ACTION_SEND -> {
                 // Try EXTRA_STREAM first (standard for file sharing)
                 var uri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
-                android.util.Log.d("TicketListActivity", "EXTRA_STREAM uri: $uri")
+                if (BuildConfig.DEBUG) android.util.Log.d("TicketListActivity", "EXTRA_STREAM uri: $uri")
 
                 // Fallback: Try intent.data (some apps use this)
                 if (uri == null) {
                     uri = intent.data
-                    android.util.Log.d("TicketListActivity", "Fallback to intent.data: $uri")
+                    if (BuildConfig.DEBUG) android.util.Log.d("TicketListActivity", "Fallback to intent.data: $uri")
                 }
 
                 // Fallback: Try EXTRA_TEXT (might contain a URI string)
                 if (uri == null) {
                     val text = intent.getStringExtra(Intent.EXTRA_TEXT)
-                    android.util.Log.d("TicketListActivity", "EXTRA_TEXT: $text")
+                    if (BuildConfig.DEBUG) android.util.Log.d("TicketListActivity", "EXTRA_TEXT: $text")
                     if (text != null) {
                         try {
                             uri = Uri.parse(text)
-                            android.util.Log.d("TicketListActivity", "Parsed URI from EXTRA_TEXT: $uri")
+                            if (BuildConfig.DEBUG) android.util.Log.d("TicketListActivity", "Parsed URI from EXTRA_TEXT: $uri")
                         } catch (e: Exception) {
                             android.util.Log.e("TicketListActivity", "Failed to parse URI from EXTRA_TEXT", e)
                         }
@@ -153,7 +153,7 @@ class TicketListActivity : AppCompatActivity() {
                 }
 
                 if (uri != null) {
-                    android.util.Log.d("TicketListActivity", "Navigating to AddTicket with URI: $uri")
+                    if (BuildConfig.DEBUG) android.util.Log.d("TicketListActivity", "Navigating to AddTicket with URI: $uri")
                     navigateToAddTicket(uri)
                 } else {
                     android.util.Log.e("TicketListActivity", "No URI found in SEND intent!")
@@ -166,7 +166,7 @@ class TicketListActivity : AppCompatActivity() {
             }
             Intent.ACTION_VIEW -> {
                 intent.data?.let { uri ->
-                    android.util.Log.d("TicketListActivity", "ACTION_VIEW with URI: $uri")
+                    if (BuildConfig.DEBUG) android.util.Log.d("TicketListActivity", "ACTION_VIEW with URI: $uri")
                     navigateToAddTicket(uri)
                 }
             }
@@ -192,13 +192,13 @@ class TicketListActivity : AppCompatActivity() {
     }
 
     private fun navigateToAddTicket(uri: Uri) {
-        android.util.Log.d("TicketListActivity", "navigateToAddTicket - Creating intent for AddTicketActivity")
-        android.util.Log.d("TicketListActivity", "navigateToAddTicket - URI: $uri")
+        if (BuildConfig.DEBUG) android.util.Log.d("TicketListActivity", "navigateToAddTicket - Creating intent for AddTicketActivity")
+        if (BuildConfig.DEBUG) android.util.Log.d("TicketListActivity", "navigateToAddTicket - URI: $uri")
         val intent = Intent(this, AddTicketActivity::class.java)
         intent.putExtra("DOCUMENT_URI", uri.toString())
-        android.util.Log.d("TicketListActivity", "navigateToAddTicket - Starting AddTicketActivity")
+        if (BuildConfig.DEBUG) android.util.Log.d("TicketListActivity", "navigateToAddTicket - Starting AddTicketActivity")
         startActivity(intent)
-        android.util.Log.d("TicketListActivity", "navigateToAddTicket - AddTicketActivity started")
+        if (BuildConfig.DEBUG) android.util.Log.d("TicketListActivity", "navigateToAddTicket - AddTicketActivity started")
     }
 
     private fun setupSwipeToDelete() {
