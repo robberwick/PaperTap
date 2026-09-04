@@ -1,0 +1,51 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: cache gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      - name: set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: lint
+        run: |
+          ./gradlew lint --no-daemon -Dorg.gradle.java.home="$JAVA_HOME"
+
+      - name: unit tests
+        run: |
+          ./gradlew testDebugUnitTest --no-daemon -Dorg.gradle.java.home="$JAVA_HOME"
+
+      - name: assemble debug apk
+        run: |
+          ./gradlew assembleDebug --no-daemon -Dorg.gradle.java.home="$JAVA_HOME"
+
+      - name: upload apk
+        uses: actions/upload-artifact@v4
+        with:
+          name: papertap-debug
+          path: app/build/outputs/apk/debug/papertap-debug.apk
+          if-no-files-found: error
