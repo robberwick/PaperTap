@@ -57,30 +57,24 @@ class WaveShareNfcWriter {
     }
 
     /**
-     * Write bitmap to e-paper display.
-     * @param displayType WaveShare display type (1-8)
-     * @param bitmap Image to write (must match display dimensions)
-     * @return WriteResult indicating success or error type
+     * Write [bitmap] to [model]. The bitmap must match the selected model's
+     * physical resolution in either orientation.
      */
-    fun writeBitmap(displayType: Int, bitmap: Bitmap): WriteResult {
+    fun writeBitmap(model: DisplayModel, bitmap: Bitmap): WriteResult {
         val nfc = nfcA ?: return WriteResult.COMMUNICATION_ERROR
-        val config = DisplayConfig.forDisplayType(displayType) ?: return WriteResult.DIMENSION_MISMATCH
-
-        // Validate bitmap dimensions
-        if (!DisplayConfig.validateDimensions(displayType, bitmap.width, bitmap.height)) {
+        if (!model.matchesDimensions(bitmap.width, bitmap.height)) {
             return WriteResult.DIMENSION_MISMATCH
         }
 
+        var success = false
         return try {
             progress = 0
-
-            val success = if (displayType == 8) {
-                // 1.54" B uses special protocol
-                writeDisplay154B(nfc, config, bitmap)
+            success = if (model.protocol == DisplayModel.Protocol.ONE_54_B) {
+                writeDisplay154B(nfc, model, bitmap)
             } else {
-                // Standard protocol for all other displays
+                // A4 moves this after tag validation/handshake in the next NFC-path cluster.
                 writeNdefRecord(nfc)
-                writeStandardDisplay(nfc, config, bitmap)
+                writeStandardDisplay(nfc, model, bitmap)
             }
 
             if (success) {
@@ -93,6 +87,12 @@ class WaveShareNfcWriter {
             if (BuildConfig.DEBUG) e.printStackTrace()
             progress = -1
             WriteResult.COMMUNICATION_ERROR
+        } finally {
+            // B3: best-effort cleanup on every failure path. A failed cleanup
+            // must not mask the original write result.
+            if (!success) {
+                sendCommand(nfc, 0xCD.toByte(), 0x04)
+            }
         }
     }
 
@@ -147,153 +147,185 @@ class WaveShareNfcWriter {
     }
 
     /**
-     * Write to standard e-paper displays (types 1-7).
+     * Standard WaveShare protocol, driven entirely by [DisplayModel]. Model
+     * selectors, payload lengths, packet counts, and special passes mirror
+     * proxmark3's WaveShare implementation.
      */
-    private fun writeStandardDisplay(nfc: NfcA, config: DisplayConfig, bitmap: Bitmap): Boolean {
-        // Command sequence: Initialize display
-        if (!sendCommand(nfc, 0xCD.toByte(), 0x0D)) return false
-        if (!sendCommand(nfc, 0xCD.toByte(), 0x00, config.commandByte)) return false
-        SystemClock.sleep(50)
+    private fun writeStandardDisplay(nfc: NfcA, model: DisplayModel, bitmap: Bitmap): Boolean {
+        val modelSelectByte = model.modelSelectByte ?: return false
 
+        if (!sendCommand(nfc, 0xCD.toByte(), 0x0D)) return false
+        if (!sendCommand(nfc, 0xCD.toByte(), 0x00, modelSelectByte)) return false
+        SystemClock.sleep(50)
         if (!sendCommand(nfc, 0xCD.toByte(), 0x01)) return false
         SystemClock.sleep(20)
-
         if (!sendCommand(nfc, 0xCD.toByte(), 0x02)) return false
         SystemClock.sleep(20)
-
         if (!sendCommand(nfc, 0xCD.toByte(), 0x03)) return false
         SystemClock.sleep(20)
-
         if (!sendCommand(nfc, 0xCD.toByte(), 0x05)) return false
         SystemClock.sleep(20)
-
         if (!sendCommand(nfc, 0xCD.toByte(), 0x06)) return false
         SystemClock.sleep(10)
+        if (!sendCommand(nfc, 0xCD.toByte(), 0x07)) return false
 
-        // Process and prepare image data
-        val processedBitmap = if (config.needsRotation) {
+        val processedBitmap = if (
+            model.needsRotation && bitmap.width == model.width && bitmap.height == model.height
+        ) {
             rotateBitmap(bitmap, 270f)
         } else {
             bitmap
         }
 
-        prepareImageData(config, processedBitmap)
+        try {
+            prepareImageData(model, processedBitmap)
 
-        // Send first layer data (swapped to match display protocol)
-        if (!sendCommand(nfc, 0xCD.toByte(), 0x07, 0x00)) return false
-
-        for (packetIndex in 0 until config.packetCount) {
-            val packet = ByteArray(config.packetSize.toInt())
-            packet[0] = 0xCD.toByte()
-            packet[1] = 0x08
-            packet[2] = (config.packetSize - 3).toByte()
-
-            val dataSize = config.packetSize - 3
-            // Send redLayerData first (this goes to the black layer on the display)
-            System.arraycopy(redLayerData, packetIndex * dataSize, packet, 3, dataSize)
-
-            val response = nfc.transceive(packet)
-            if (response[0] != 0.toByte() || response[1] != 0.toByte()) return false
-
-            // Update progress (0-50% for black layer on dual-layer displays)
-            progress = if (config.hasRedLayer) {
-                packetIndex * 50 / config.packetCount
-            } else {
-                packetIndex * 100 / config.packetCount
+            val firstPassComplete = when (model.protocol) {
+                DisplayModel.Protocol.SINGLE_PASS -> sendDataPass(
+                    nfc = nfc,
+                    command = 0x08,
+                    model = model,
+                    source = blackLayerData,
+                    progressStart = 0,
+                    progressEnd = 100,
+                )
+                DisplayModel.Protocol.BLANK_THEN_BLACK -> sendDataPass(
+                    nfc = nfc,
+                    command = 0x08,
+                    model = model,
+                    fillByte = 0xFF.toByte(),
+                    progressStart = 0,
+                    progressEnd = 50,
+                )
+                DisplayModel.Protocol.DUAL_LAYER -> sendDataPass(
+                    nfc = nfc,
+                    command = 0x08,
+                    model = model,
+                    // prepareImageData preserves the working 1.54B encoding:
+                    // this buffer is the first (black-plane) transmission.
+                    source = redLayerData,
+                    progressStart = 0,
+                    progressEnd = 50,
+                )
+                DisplayModel.Protocol.ONE_54_B -> false
             }
+            if (!firstPassComplete) return false
 
-            SystemClock.sleep(2)
-        }
+            if (model.trailingPadding && !sendTrailingPadding(nfc)) return false
+            if (!sendCommand(nfc, 0xCD.toByte(), 0x18)) return false
 
-        // Special handling for 4.2" V2 display
-        if (config.width == 880 && config.height == 528) {
-            val padding = ByteArray(113)
-            padding[0] = 0xCD.toByte()
-            padding[1] = 0x08
-            padding[2] = 120
-            for (i in 3 until 113) {
-                padding[i] = 0xFF.toByte()
-            }
-            nfc.transceive(padding)
-        }
-
-        // Prepare for refresh or red layer
-        if (!sendCommand(nfc, 0xCD.toByte(), 0x18)) return false
-
-        // Handle second layer for dual-layer displays
-        if (config.hasRedLayer) {
-            when (config.width) {
-                296 -> { // 2.13" B
-                    for (packetIndex in 0 until config.packetCount) {
-                        val packet = ByteArray(config.packetSize.toInt())
-                        packet[0] = 0xCD.toByte()
-                        packet[1] = 0x08
-                        packet[2] = (config.packetSize - 3).toByte()
-
-                        val dataSize = config.packetSize - 3
-                        // Send blackLayerData second (this goes to the red layer on the display)
-                        System.arraycopy(blackLayerData, packetIndex * dataSize, packet, 3, dataSize)
-
-                        val response = nfc.transceive(packet)
-                        if (response[0] != 0.toByte() || response[1] != 0.toByte()) return false
-
-                        progress = packetIndex * 50 / config.packetCount + 50
-                        SystemClock.sleep(2)
-                    }
-                }
-                264 -> { // 2.7" with special red layer protocol
+            when (model.protocol) {
+                DisplayModel.Protocol.BLANK_THEN_BLACK -> {
                     SystemClock.sleep(100)
-
-                    for (packetIndex in 0 until 48) {
-                        val packet = ByteArray(124)
-                        packet[0] = 0xCD.toByte()
-                        packet[1] = 0x19
-                        packet[2] = 121
-
-                        // Send redLayerData for 2.7" second layer
-                        System.arraycopy(redLayerData, packetIndex * 121, packet, 3, 121)
-
-                        progress = packetIndex * 50 / 48 + 51
-                        val response = nfc.transceive(packet)
-                        if (response[0] != 0.toByte() || response[1] != 0.toByte()) return false
-
-                        SystemClock.sleep(2)
-                    }
-
+                    if (!sendDataPass(
+                            nfc = nfc,
+                            command = 0x19,
+                            model = model,
+                            source = blackLayerData,
+                            progressStart = 50,
+                            progressEnd = 100,
+                        )
+                    ) return false
                     SystemClock.sleep(100)
                 }
-            }
-        }
-
-        // Trigger display refresh
-        SystemClock.sleep(200)
-        if (!sendCommand(nfc, 0xCD.toByte(), 0x09)) return false
-
-        // Wait for refresh to complete
-        SystemClock.sleep(300)
-        var attempts = 0
-        while (true) {
-            attempts++
-            val response = nfc.transceive(byteArrayOf(0xCD.toByte(), 0x0A))
-            if (response[0] == 0xFF.toByte() && response[1] == 0.toByte()) {
-                // Refresh complete
-                if (!sendCommand(nfc, 0xCD.toByte(), 0x04)) return false
-                progress = 100
-                return true
+                DisplayModel.Protocol.DUAL_LAYER -> {
+                    if (!sendDataPass(
+                            nfc = nfc,
+                            command = 0x19,
+                            model = model,
+                            source = blackLayerData,
+                            progressStart = 50,
+                            progressEnd = 100,
+                        )
+                    ) return false
+                }
+                DisplayModel.Protocol.SINGLE_PASS,
+                DisplayModel.Protocol.ONE_54_B -> Unit
             }
 
-            if (attempts > 100) {
-                return false // Timeout
-            }
+            SystemClock.sleep(200)
+            if (!sendCommand(nfc, 0xCD.toByte(), 0x09)) return false
 
-            SystemClock.sleep(25)
+            SystemClock.sleep(model.readyPollDelayMs)
+            var attempts = 0
+            while (true) {
+                attempts++
+                val response = nfc.transceive(byteArrayOf(0xCD.toByte(), 0x0A))
+                if (isSuccessResponse(response, first = 0xFF.toByte())) {
+                    if (!sendCommand(nfc, 0xCD.toByte(), 0x04)) return false
+                    progress = 100
+                    return true
+                }
+                if (attempts > 100) return false
+                SystemClock.sleep(25)
+            }
+        } finally {
+            if (processedBitmap !== bitmap) {
+                processedBitmap.recycle()
+            }
         }
     }
+
+    private fun sendDataPass(
+        nfc: NfcA,
+        command: Byte,
+        model: DisplayModel,
+        source: ByteArray? = null,
+        fillByte: Byte? = null,
+        progressStart: Int,
+        progressEnd: Int,
+    ): Boolean {
+        require((source == null) != (fillByte == null)) {
+            "Exactly one packet source must be supplied"
+        }
+
+        val packet = ByteArray(model.dataBytesPerPacket + 3)
+        packet[0] = 0xCD.toByte()
+        packet[1] = command
+        packet[2] = model.dataBytesPerPacket.toByte()
+        if (fillByte != null) {
+            packet.fill(fillByte, 3, packet.size)
+        }
+
+        for (packetIndex in 0 until model.packetCount) {
+            if (source != null) {
+                System.arraycopy(
+                    source,
+                    packetIndex * model.dataBytesPerPacket,
+                    packet,
+                    3,
+                    model.dataBytesPerPacket,
+                )
+            }
+            val response = nfc.transceive(packet)
+            if (!isSuccessResponse(response)) return false
+
+            progress = progressStart +
+                ((packetIndex + 1) * (progressEnd - progressStart) / model.packetCount)
+            SystemClock.sleep(2)
+        }
+        return true
+    }
+
+    /** 7.5" HD requires one final partial white packet after its 484 full packets. */
+    private fun sendTrailingPadding(nfc: NfcA): Boolean {
+        val packet = ByteArray(113)
+        packet[0] = 0xCD.toByte()
+        packet[1] = 0x08
+        packet[2] = 120
+        packet.fill(0xFF.toByte(), 3, packet.size)
+        return isSuccessResponse(nfc.transceive(packet))
+    }
+
+    private fun isSuccessResponse(
+        response: ByteArray,
+        first: Byte = 0,
+    ): Boolean = response.size >= 2 && response[0] == first && response[1] == 0.toByte()
 
     /**
      * Write to 1.54" B display (special protocol).
      */
-    private fun writeDisplay154B(nfc: NfcA, config: DisplayConfig, bitmap: Bitmap): Boolean {
+    private fun writeDisplay154B(nfc: NfcA, model: DisplayModel, bitmap: Bitmap): Boolean {
         SystemClock.sleep(10)
 
         // Initialize display
@@ -313,7 +345,7 @@ class WaveShareNfcWriter {
         SystemClock.sleep(100)
 
         // Prepare image data
-        prepareImageData(config, bitmap)
+        prepareImageData(model, bitmap)
 
         // Send first layer (swapped)
         for (packetIndex in 0 until 50) {
@@ -368,60 +400,59 @@ class WaveShareNfcWriter {
         }
     }
 
-    /**
-     * Prepare image data from bitmap (convert to black/white bytes).
-     */
-    private fun prepareImageData(config: DisplayConfig, bitmap: Bitmap) {
+    /** Pack bitmap pixels into the exact byte layout declared by [model]. */
+    private fun prepareImageData(model: DisplayModel, bitmap: Bitmap) {
         val pixels = IntArray(bitmap.width * bitmap.height)
         bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
 
-        val width = bitmap.width
-        val height = bitmap.height
+        val bytesPerRow = (bitmap.width + 7) / 8
+        val packedSize = bytesPerRow * bitmap.height
+        val expectedSize = model.dataBytesPerPacket * model.packetCount
+        require(packedSize == expectedSize) {
+            "${model.label} packing mismatch: $packedSize bytes for ${bitmap.width}x${bitmap.height}, expected $expectedSize"
+        }
 
-        for (y in 0 until height) {
-            for (x in 0 until width / 8) {
+        blackLayerData.fill(0, 0, packedSize)
+        redLayerData.fill(0, 0, packedSize)
+        val dualLayer = model.protocol == DisplayModel.Protocol.DUAL_LAYER ||
+            model.protocol == DisplayModel.Protocol.ONE_54_B
+
+        for (y in 0 until bitmap.height) {
+            for (xByte in 0 until bytesPerRow) {
                 var blackByte: Byte = 0
                 var redByte: Byte = 0
 
                 for (bit in 0 until 8) {
-                    val pixelIndex = (bit + x * 8) + y * width
-                    val pixel = pixels[pixelIndex]
-
                     blackByte = (blackByte.toInt() shl 1).toByte()
                     redByte = (redByte.toInt() shl 1).toByte()
 
-                    if (config.hasRedLayer) {
-                        // Dual-layer display (black + red e-paper)
-                        // Empirically determined encoding (with swapped send order):
-                        // First transmission controls black layer, Second controls red layer
-                        // Black pixels (0,0) → show black ✓
-                        // White pixels (1,0) → show white (first=1, second=0)
-                        // Red pixels (0,1) → show red (first=0, second=1)
-
-                        val gray = ((pixel shr 16) and 0xFF) * 0.299f +
-                                   ((pixel shr 8) and 0xFF) * 0.587f +
-                                   (pixel and 0xFF) * 0.114f
-
-                        // For white pixels: set redByte (sent first), keep blackByte at 0 (sent second)
-                        if (pixel == -1) {  // 0xFFFFFFFF = pure white
-                            redByte = (redByte.toInt() or 1).toByte()
-                            // blackByte stays 0
-                        }
-                        // For dark pixels: leave both at 0 to show black
-                        // (gray <= 128 → both bytes stay 0)
+                    val x = xByte * 8 + bit
+                    val isWhite = if (x >= bitmap.width) {
+                        true // white-pad controllers whose width is not byte-aligned
                     } else {
-                        // Single-layer display: white pixels (> 128 threshold)
-                        val gray = ((pixel shr 16) and 0xFF) * 0.299f +
-                                   ((pixel shr 8) and 0xFF) * 0.587f +
-                                   (pixel and 0xFF) * 0.114f
+                        val pixel = pixels[x + y * bitmap.width]
+                        if (dualLayer) {
+                            pixel == -1 // BarcodeGenerator emits pure B/W pixels
+                        } else {
+                            val gray = ((pixel shr 16) and 0xFF) * 0.299f +
+                                ((pixel shr 8) and 0xFF) * 0.587f +
+                                (pixel and 0xFF) * 0.114f
+                            gray > 128
+                        }
+                    }
 
-                        if (gray > 128) {
+                    if (isWhite) {
+                        if (dualLayer) {
+                            // Preserves the hardware-verified 1.54B encoding:
+                            // redLayerData is transmitted first as the black plane.
+                            redByte = (redByte.toInt() or 1).toByte()
+                        } else {
                             blackByte = (blackByte.toInt() or 1).toByte()
                         }
                     }
                 }
 
-                val dataIndex = y * (width / 8) + x
+                val dataIndex = y * bytesPerRow + xByte
                 blackLayerData[dataIndex] = blackByte
                 redLayerData[dataIndex] = redByte
             }
@@ -434,8 +465,7 @@ class WaveShareNfcWriter {
      */
     private fun sendCommand(nfc: NfcA, vararg command: Byte): Boolean {
         return try {
-            val response = nfc.transceive(command)
-            response[0] == 0.toByte() && response[1] == 0.toByte()
+            isSuccessResponse(nfc.transceive(command))
         } catch (e: IOException) {
             if (BuildConfig.DEBUG) e.printStackTrace()
             false

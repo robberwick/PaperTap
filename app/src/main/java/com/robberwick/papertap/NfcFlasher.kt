@@ -30,6 +30,7 @@ import com.google.android.material.card.MaterialCardView
 import androidx.lifecycle.lifecycleScope
 import com.robberwick.papertap.database.TicketEntity
 import com.robberwick.papertap.database.TicketRepository
+import com.robberwick.papertap.waveshare.DisplayModel
 import com.robberwick.papertap.waveshare.WaveShareNfcWriter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -234,7 +235,7 @@ class NfcFlasher : AppCompatActivity() {
         Log.v("Intent.action", intent.action ?: "no action")
 
         val preferences = Preferences(this)
-        val screenSizeEnum = preferences.getScreenSizeEnum()
+        val displayModel = preferences.getDisplayModel()
 
         if (intent.action == NfcAdapter.ACTION_NDEF_DISCOVERED || intent.action == NfcAdapter.ACTION_TAG_DISCOVERED || intent.action == NfcAdapter.ACTION_TECH_DISCOVERED) {
             @Suppress("DEPRECATION")
@@ -305,7 +306,7 @@ class NfcFlasher : AppCompatActivity() {
                 Log.v("Matched!", "Tag is a match! Preparing to flash...")
                 playStartSound()
                 lifecycleScope.launch {
-                    flashBitmap(detectedTag, bitmap, screenSizeEnum)
+                    flashBitmap(detectedTag, bitmap, displayModel)
                 }
             } else {
                 Log.v("Not flashing", "Flashing already in progress!")
@@ -313,7 +314,7 @@ class NfcFlasher : AppCompatActivity() {
         }
     }
 
-    private fun flashBitmap(tag: Tag, bitmap: Bitmap, screenSizeEnum: Int) {
+    private fun flashBitmap(tag: Tag, bitmap: Bitmap, displayModel: DisplayModel) {
         this.mIsFlashing = true
         val writer = WaveShareNfcWriter()
         val nfcObj = NfcA.get(tag)
@@ -346,8 +347,7 @@ class NfcFlasher : AppCompatActivity() {
 
                 // Write bitmap to display
                 tntag = NfcA.get(tag)
-                val result = writer.writeBitmap(screenSizeEnum, bitmap)
-
+                val result = writer.writeBitmap(displayModel, bitmap)
                 success = (result == WaveShareNfcWriter.WriteResult.SUCCESS)
 
                 if (!success) {
@@ -606,7 +606,9 @@ class NfcFlasher : AppCompatActivity() {
     private fun loadTicketImage(ticket: TicketEntity) {
         try {
             val preferences = Preferences(this)
-            val (screenWidth, screenHeight) = preferences.getScreenSizePixels()
+            val displayModel = preferences.getDisplayModel()
+            val screenWidth = displayModel.width
+            val screenHeight = displayModel.height
 
             // Build list of labels based on settings
             val labels = mutableListOf<BarcodeLabel>()

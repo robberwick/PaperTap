@@ -7,6 +7,19 @@
         android:title="Display Settings"
         android:iconSpaceReserved="false">
 
+        <ListPreference
+            android:key="Display_Size"
+            android:title="@string/display_model_title"
+            android:defaultValue="1.54_b"
+            android:iconSpaceReserved="false" />
+
+        <SwitchPreferenceCompat
+            android:key="Experimental_Display_Models"
+            android:title="@string/experimental_display_models_title"
+            android:summary="@string/experimental_display_models_summary"
+            android:defaultValue="false"
+            android:iconSpaceReserved="false" />
+
         <SeekBarPreference
             android:key="Qr_Padding"
             android:title="Edge Padding"
