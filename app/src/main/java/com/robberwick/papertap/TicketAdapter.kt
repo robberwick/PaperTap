@@ -12,17 +12,25 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.color.MaterialColors
 import com.robberwick.papertap.database.TicketEntity
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import com.robberwick.papertap.database.TicketWithDisplays
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class TicketAdapter(
     private val onTicketClick: (TicketEntity) -> Unit,
     private val onTicketLongClick: ((TicketEntity) -> Unit)? = null,
-    private val displayRepository: com.robberwick.papertap.database.DisplayRepository,
-    private val ticketRepository: com.robberwick.papertap.database.TicketRepository
-) : ListAdapter<TicketEntity, TicketAdapter.TicketViewHolder>(TicketDiffCallback()) {
+) : ListAdapter<TicketWithDisplays, TicketAdapter.TicketViewHolder>(TicketDiffCallback()) {
+    private var mostRecentTicketId: Long? = null
+
+    fun submitTickets(tickets: List<TicketWithDisplays>) {
+        mostRecentTicketId = tickets.asSequence()
+            .map { it.ticket }
+            .filter { it.lastFlashedAt != null }
+            .maxByOrNull { it.lastFlashedAt!! }
+            ?.id
+        submitList(tickets)
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TicketViewHolder {
         val view = LayoutInflater.from(parent.context)
@@ -31,21 +39,16 @@ class TicketAdapter(
     }
 
     override fun onBindViewHolder(holder: TicketViewHolder, position: Int) {
-        val ticket = getItem(position)
-
-        // Find the most recently flashed ticket
-        val mostRecentTicket = currentList
-            .filter { it.lastFlashedAt != null }
-            .maxByOrNull { it.lastFlashedAt!! }
-
-        val isMostRecent = mostRecentTicket != null && ticket.id == mostRecentTicket.id
-
-        holder.bind(ticket, isMostRecent, onTicketClick, onTicketLongClick, displayRepository, ticketRepository)
+        val item = getItem(position)
+        holder.bind(
+            item = item,
+            isMostRecent = item.ticket.id == mostRecentTicketId,
+            onTicketClick = onTicketClick,
+            onTicketLongClick = onTicketLongClick,
+        )
     }
 
-    fun getTicketAt(position: Int): TicketEntity {
-        return getItem(position)
-    }
+    fun getTicketAt(position: Int): TicketEntity = getItem(position).ticket
 
     class TicketViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val cardView: MaterialCardView = itemView as MaterialCardView
@@ -55,34 +58,36 @@ class TicketAdapter(
         private val lastFlashedDisplayText: TextView = itemView.findViewById(R.id.lastFlashedDisplayText)
 
         fun bind(
-            ticket: TicketEntity, 
-            isMostRecent: Boolean, 
-            onTicketClick: (TicketEntity) -> Unit, 
+            item: TicketWithDisplays,
+            isMostRecent: Boolean,
+            onTicketClick: (TicketEntity) -> Unit,
             onTicketLongClick: ((TicketEntity) -> Unit)?,
-            displayRepository: com.robberwick.papertap.database.DisplayRepository,
-            ticketRepository: com.robberwick.papertap.database.TicketRepository
         ) {
-            // Show label as primary text
+            val ticket = item.ticket
             journeyText.text = ticket.userLabel
+            dateTimeText.text = buildJourneyInfo(ticket)
+                ?: "Added ${SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(Date(ticket.addedAt))}"
 
-            // Show journey metadata if available, otherwise show "Added [date]"
-            val journeyInfo = buildJourneyInfo(ticket)
-            if (journeyInfo != null) {
-                dateTimeText.text = journeyInfo
-            } else {
-                val dateFormat = java.text.SimpleDateFormat("MMM d, yyyy", java.util.Locale.getDefault())
-                dateTimeText.text = "Added ${dateFormat.format(java.util.Date(ticket.addedAt))}"
+            applyColors(isMostRecent)
+            bindUsage(ticket)
+            lastFlashedDisplayText.text = displaySummary(item)
+
+            itemView.setOnClickListener { onTicketClick(ticket) }
+            itemView.setOnLongClickListener {
+                onTicketLongClick?.invoke(ticket)
+                true
             }
+        }
 
-            // Apply background and text colors for most recently flashed ticket
+        private fun applyColors(isMostRecent: Boolean) {
             if (isMostRecent) {
                 val primaryContainer = MaterialColors.getColor(
                     itemView,
-                    com.google.android.material.R.attr.colorPrimaryContainer
+                    com.google.android.material.R.attr.colorPrimaryContainer,
                 )
                 val onPrimaryContainer = MaterialColors.getColor(
                     itemView,
-                    com.google.android.material.R.attr.colorOnPrimaryContainer
+                    com.google.android.material.R.attr.colorOnPrimaryContainer,
                 )
                 cardView.setCardBackgroundColor(ColorStateList.valueOf(primaryContainer))
                 dateTimeText.setTextColor(onPrimaryContainer)
@@ -91,94 +96,67 @@ class TicketAdapter(
             } else {
                 val surface = MaterialColors.getColor(
                     itemView,
-                    com.google.android.material.R.attr.colorSurface
+                    com.google.android.material.R.attr.colorSurface,
                 )
                 val onSurface = MaterialColors.getColor(
                     itemView,
-                    com.google.android.material.R.attr.colorOnSurface
+                    com.google.android.material.R.attr.colorOnSurface,
                 )
                 val onSurfaceVariant = MaterialColors.getColor(
                     itemView,
-                    com.google.android.material.R.attr.colorOnSurfaceVariant
+                    com.google.android.material.R.attr.colorOnSurfaceVariant,
                 )
                 cardView.setCardBackgroundColor(ColorStateList.valueOf(surface))
                 dateTimeText.setTextColor(onSurface)
                 journeyText.setTextColor(onSurface)
                 usageInfoText.setTextColor(onSurfaceVariant)
             }
+        }
 
-            // Show usage information if ticket has been flashed
-            if (ticket.lastFlashedAt != null && ticket.flashCount > 0) {
-                val currentTime = System.currentTimeMillis()
-                val timeDiffSeconds = (currentTime - ticket.lastFlashedAt) / 1000
-
-                val relativeTime = if (timeDiffSeconds < 60) {
-                    "just now"
-                } else {
-                    DateUtils.getRelativeTimeSpanString(
-                        ticket.lastFlashedAt,
-                        currentTime,
-                        DateUtils.MINUTE_IN_MILLIS,
-                        DateUtils.FORMAT_ABBREV_RELATIVE
-                    )
-                }
-
-                val usageText = if (ticket.flashCount == 1) {
-                    "Last used $relativeTime"
-                } else {
-                    "Used ${ticket.flashCount} times • Last used $relativeTime"
-                }
-
-                usageInfoText.text = usageText
-                usageInfoText.visibility = View.VISIBLE
-            } else {
+        private fun bindUsage(ticket: TicketEntity) {
+            val lastFlashedAt = ticket.lastFlashedAt
+            if (lastFlashedAt == null || ticket.flashCount <= 0) {
                 usageInfoText.visibility = View.GONE
+                return
             }
 
-            // Show display info (many-to-many)
-            CoroutineScope(Dispatchers.IO).launch {
-                val displayUids = ticketRepository.getDisplayUidsForTicket(ticket.id)
-                
-                val displayText = when (displayUids.size) {
-                    0 -> "Not yet flashed"
-                    1 -> {
-                        // Single display - show label or UID
-                        val display = displayRepository.getByUid(displayUids[0])
-                        val displayName = display?.userLabel ?: displayUids[0]
-                        "On display: $displayName"
-                    }
-                    else -> {
-                        // Multiple displays - show labels or count
-                        val displayNames = displayUids.mapNotNull { uid ->
-                            displayRepository.getByUid(uid)?.userLabel ?: uid
-                        }
-                        if (displayNames.all { it.startsWith("UID:") }) {
-                            // All are hex UIDs - just show count
-                            "On displays: ${displayUids.size} displays"
+            val currentTime = System.currentTimeMillis()
+            val relativeTime = if ((currentTime - lastFlashedAt) / 1000 < 60) {
+                "just now"
+            } else {
+                DateUtils.getRelativeTimeSpanString(
+                    lastFlashedAt,
+                    currentTime,
+                    DateUtils.MINUTE_IN_MILLIS,
+                    DateUtils.FORMAT_ABBREV_RELATIVE,
+                )
+            }
+            usageInfoText.text = if (ticket.flashCount == 1) {
+                "Last used $relativeTime"
+            } else {
+                "Used ${ticket.flashCount} times • Last used $relativeTime"
+            }
+            usageInfoText.visibility = View.VISIBLE
+        }
+
+        private fun displaySummary(item: TicketWithDisplays): String {
+            val displays = item.displays
+            return when (displays.size) {
+                0 -> "Not yet flashed"
+                1 -> "On display: ${displays[0].userLabel ?: displays[0].tagUid}"
+                else -> {
+                    val names = displays.map { it.userLabel ?: it.tagUid }
+                    if (names.all { it.startsWith("UID:") }) {
+                        "On displays: ${names.size} displays"
+                    } else {
+                        val labels = names.take(2).joinToString(", ")
+                        if (names.size > 2) {
+                            "On displays: $labels, +${names.size - 2} more"
                         } else {
-                            // Show labels (max 2, then ellipsis)
-                            val labels = displayNames.take(2).joinToString(", ")
-                            if (displayNames.size > 2) {
-                                "On displays: $labels, +${displayNames.size - 2} more"
-                            } else {
-                                "On displays: $labels"
-                            }
+                            "On displays: $labels"
                         }
                     }
                 }
-                
-                withContext(Dispatchers.Main) {
-                    lastFlashedDisplayText.text = displayText
-                }
-            }
-
-            itemView.setOnClickListener {
-                onTicketClick(ticket)
-            }
-
-            itemView.setOnLongClickListener {
-                onTicketLongClick?.invoke(ticket)
-                true
             }
         }
 
@@ -186,51 +164,35 @@ class TicketAdapter(
             val hasOrigin = !ticket.originStationCode.isNullOrEmpty()
             val hasDestination = !ticket.destinationStationCode.isNullOrEmpty()
             val hasTravelDate = ticket.travelDate != null
-
-            // Build the journey string if we have any metadata
-            if (!hasOrigin && !hasDestination && !hasTravelDate) {
-                return null
-            }
+            if (!hasOrigin && !hasDestination && !hasTravelDate) return null
 
             val parts = mutableListOf<String>()
-
-            // Add origin → destination if available
             if (hasOrigin || hasDestination) {
-                val originName = ticket.originStationCode?.let {
-                    StationLookup.getStationName(it)
-                }
-                val destName = ticket.destinationStationCode?.let {
-                    StationLookup.getStationName(it)
-                }
-
-                val routePart = when {
+                val originName = ticket.originStationCode?.let(StationLookup::getStationName)
+                val destinationName = ticket.destinationStationCode?.let(StationLookup::getStationName)
+                parts += when {
                     hasOrigin && hasDestination ->
-                        "${originName ?: ticket.originStationCode} (${ticket.originStationCode}) → ${destName ?: ticket.destinationStationCode} (${ticket.destinationStationCode})"
-                    hasOrigin ->
-                        "${originName ?: ticket.originStationCode} (${ticket.originStationCode}) → ?"
-                    else ->
-                        "? → ${destName ?: ticket.destinationStationCode} (${ticket.destinationStationCode})"
+                        "${originName ?: ticket.originStationCode} (${ticket.originStationCode}) → ${destinationName ?: ticket.destinationStationCode} (${ticket.destinationStationCode})"
+                    hasOrigin -> "${originName ?: ticket.originStationCode} (${ticket.originStationCode}) → ?"
+                    else -> "? → ${destinationName ?: ticket.destinationStationCode} (${ticket.destinationStationCode})"
                 }
-                parts.add(routePart)
             }
-
-            // Add travel date if available
-            if (hasTravelDate && ticket.travelDate != null) {
-                val dateFormat = java.text.SimpleDateFormat("d MMM yyyy", java.util.Locale.getDefault())
-                parts.add(dateFormat.format(java.util.Date(ticket.travelDate)))
+            ticket.travelDate?.let { travelDate ->
+                parts += SimpleDateFormat("d MMM yyyy", Locale.getDefault()).format(Date(travelDate))
             }
-
             return parts.joinToString(" | ")
         }
     }
 
-    class TicketDiffCallback : DiffUtil.ItemCallback<TicketEntity>() {
-        override fun areItemsTheSame(oldItem: TicketEntity, newItem: TicketEntity): Boolean {
-            return oldItem.id == newItem.id
-        }
+    class TicketDiffCallback : DiffUtil.ItemCallback<TicketWithDisplays>() {
+        override fun areItemsTheSame(
+            oldItem: TicketWithDisplays,
+            newItem: TicketWithDisplays,
+        ): Boolean = oldItem.ticket.id == newItem.ticket.id
 
-        override fun areContentsTheSame(oldItem: TicketEntity, newItem: TicketEntity): Boolean {
-            return oldItem == newItem
-        }
+        override fun areContentsTheSame(
+            oldItem: TicketWithDisplays,
+            newItem: TicketWithDisplays,
+        ): Boolean = oldItem == newItem
     }
 }

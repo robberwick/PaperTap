@@ -4,8 +4,18 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.robberwick.papertap.BuildConfig
 
-@Database(entities = [TicketEntity::class, FavoriteJourneyEntity::class, DisplayEntity::class, TicketDisplayMapping::class], version = 8, exportSchema = false)
+@Database(
+    entities = [
+        TicketEntity::class,
+        FavoriteJourneyEntity::class,
+        DisplayEntity::class,
+        TicketDisplayMapping::class,
+    ],
+    version = 9,
+    exportSchema = true,
+)
 abstract class TicketDatabase : RoomDatabase() {
     abstract fun ticketDao(): TicketDao
     abstract fun favoriteJourneyDao(): FavoriteJourneyDao
@@ -18,15 +28,19 @@ abstract class TicketDatabase : RoomDatabase() {
 
         fun getDatabase(context: Context): TicketDatabase {
             return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(
+                val builder = Room.databaseBuilder(
                     context.applicationContext,
                     TicketDatabase::class.java,
-                    "ticket_database"
-                )
-                    .fallbackToDestructiveMigration() // No migration - users can clear data
-                    .build()
-                INSTANCE = instance
-                instance
+                    "ticket_database",
+                ).addMigrations(MIGRATION_8_9)
+
+                // Release builds must fail loudly if a migration is missing;
+                // only disposable debug databases may fall back to a rebuild.
+                if (BuildConfig.DEBUG) {
+                    builder.fallbackToDestructiveMigration()
+                }
+
+                builder.build().also { INSTANCE = it }
             }
         }
     }

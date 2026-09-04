@@ -9,15 +9,13 @@ import androidx.room.Query
 interface TicketDisplayMappingDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(mapping: TicketDisplayMapping)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(mappings: List<TicketDisplayMapping>)
 
-    @Query("SELECT displayUid FROM ticket_display_mapping WHERE ticketId = :ticketId ORDER BY flashedAt DESC")
-    suspend fun getDisplayUidsForTicket(ticketId: Long): List<String>
+    @Query("SELECT * FROM ticket_display_mapping WHERE ticketId = :ticketId")
+    suspend fun getMappingsForTicket(ticketId: Long): List<TicketDisplayMapping>
 
-    @Query("DELETE FROM ticket_display_mapping WHERE ticketId = :ticketId")
-    suspend fun clearDisplaysForTicket(ticketId: Long)
 
-    @Query("DELETE FROM ticket_display_mapping WHERE ticketId = :ticketId AND displayUid = :displayUid")
-    suspend fun removeMapping(ticketId: Long, displayUid: String)
 
     @Query("DELETE FROM ticket_display_mapping WHERE displayUid = :displayUid")
     suspend fun removeMappingsForDisplay(displayUid: String)

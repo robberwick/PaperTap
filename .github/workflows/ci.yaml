@@ -51,6 +51,13 @@ jobs:
         run: |
           ./gradlew assembleDebug --no-daemon -Dorg.gradle.java.home="$JAVA_HOME"
 
+      - name: upload Room schemas
+        uses: actions/upload-artifact@v4
+        with:
+          name: room-schemas
+          path: app/schemas
+          if-no-files-found: error
+
       - name: upload apk
         uses: actions/upload-artifact@v4
         with:

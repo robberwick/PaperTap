@@ -2,29 +2,44 @@ package com.robberwick.papertap.database
 
 import android.content.Context
 import androidx.lifecycle.LiveData
-import org.json.JSONArray
+import androidx.room.withTransaction
+
+data class DeletedTicketSnapshot(
+    val ticket: TicketEntity,
+    val mappings: List<TicketDisplayMapping>,
+)
+
 
 class TicketRepository(context: Context) {
-    private val ticketDao = TicketDatabase.getDatabase(context).ticketDao()
-    private val mappingDao = TicketDatabase.getDatabase(context).ticketDisplayMappingDao()
+    private val database = TicketDatabase.getDatabase(context)
+    private val ticketDao = database.ticketDao()
+    private val mappingDao = database.ticketDisplayMappingDao()
 
-    val allTickets: LiveData<List<TicketEntity>> = ticketDao.getAllTickets()
+    val allTickets: LiveData<List<TicketWithDisplays>> = ticketDao.getTicketsWithDisplays()
 
-    suspend fun insert(ticket: TicketEntity): Long {
-        return ticketDao.insert(ticket)
-    }
 
     suspend fun update(ticket: TicketEntity) {
         ticketDao.update(ticket)
     }
 
-    suspend fun delete(ticket: TicketEntity) {
-        ticketDao.delete(ticket)
+    suspend fun deleteWithMappings(ticket: TicketEntity): DeletedTicketSnapshot {
+        return database.withTransaction {
+            val snapshot = DeletedTicketSnapshot(
+                ticket = ticket,
+                mappings = mappingDao.getMappingsForTicket(ticket.id),
+            )
+            ticketDao.delete(ticket)
+            snapshot
+        }
     }
 
-    suspend fun deleteById(id: Long) {
-        ticketDao.deleteById(id)
+    suspend fun restoreDeleted(snapshot: DeletedTicketSnapshot) {
+        database.withTransaction {
+            ticketDao.insert(snapshot.ticket)
+            mappingDao.insertAll(snapshot.mappings)
+        }
     }
+
 
     suspend fun getById(id: Long): TicketEntity? {
         return ticketDao.getById(id)
@@ -74,50 +89,12 @@ class TicketRepository(context: Context) {
         ticketDao.updateLabel(ticketId, newLabel)
     }
 
-    /**
-     * Get the most recently created ticket
-     */
-    suspend fun getMostRecentTicket(): TicketEntity? {
-        val tickets = ticketDao.getAllTicketsSync()
-        return tickets.firstOrNull()
-    }
 
-    /**
-     * Record a successful flash event for a ticket
-     * Updates: lastFlashedAt, flashCount, and flashHistory
-     */
+    /** Atomically record a successful flash so concurrent writes cannot lose counts. */
     suspend fun recordFlashEvent(ticketId: Long) {
-        val ticket = ticketDao.getById(ticketId) ?: return
-        val timestamp = System.currentTimeMillis()
-
-        // Parse existing flash history or create new array
-        val historyArray = try {
-            ticket.flashHistory?.let { JSONArray(it) } ?: JSONArray()
-        } catch (e: Exception) {
-            JSONArray()
-        }
-
-        // Add new timestamp
-        historyArray.put(timestamp)
-
-        // Update ticket with new metrics
-        val updatedTicket = ticket.copy(
-            lastFlashedAt = timestamp,
-            flashCount = ticket.flashCount + 1,
-            flashHistory = historyArray.toString()
-        )
-
-        ticketDao.update(updatedTicket)
+        ticketDao.recordFlashEvent(ticketId, System.currentTimeMillis())
     }
 
-    /**
-     * Toggle favorite status for a ticket
-     */
-    suspend fun toggleFavorite(ticketId: Long) {
-        val ticket = ticketDao.getById(ticketId) ?: return
-        val updatedTicket = ticket.copy(isFavorite = !ticket.isFavorite)
-        ticketDao.update(updatedTicket)
-    }
 
     /**
      * Add a display to a ticket's list of displays.
@@ -137,24 +114,4 @@ class TicketRepository(context: Context) {
         mappingDao.insert(mapping)
     }
 
-    /**
-     * Get all display UIDs for a ticket
-     */
-    suspend fun getDisplayUidsForTicket(ticketId: Long): List<String> {
-        return mappingDao.getDisplayUidsForTicket(ticketId)
-    }
-
-    /**
-     * Clear all displays from a ticket
-     */
-    suspend fun clearDisplaysForTicket(ticketId: Long) {
-        mappingDao.clearDisplaysForTicket(ticketId)
-    }
-
-    /**
-     * Remove a specific display from a ticket
-     */
-    suspend fun removeDisplayFromTicket(ticketId: Long, displayUid: String) {
-        mappingDao.removeMapping(ticketId, displayUid)
-    }
 }

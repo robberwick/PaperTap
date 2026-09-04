@@ -74,6 +74,13 @@ android {
         disable 'ExpiredTargetSdkVersion'
     }
 }
+kapt {
+    arguments {
+        arg("room.schemaLocation", "$projectDir/schemas")
+        arg("room.incremental", "true")
+    }
+}
+
 
 allprojects {
     repositories {

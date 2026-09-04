@@ -8,8 +8,6 @@ interface FavoriteJourneyDao {
     @Query("SELECT * FROM favorite_journeys ORDER BY createdAt DESC")
     fun getAllFavorites(): LiveData<List<FavoriteJourneyEntity>>
 
-    @Query("SELECT * FROM favorite_journeys ORDER BY createdAt DESC")
-    suspend fun getAllFavoritesSync(): List<FavoriteJourneyEntity>
 
     @Query("SELECT COUNT(*) FROM favorite_journeys")
     suspend fun getFavoritesCount(): Int
@@ -26,8 +24,6 @@ interface FavoriteJourneyDao {
     @Query("DELETE FROM favorite_journeys WHERE id = :id")
     suspend fun deleteById(id: Long)
 
-    @Query("SELECT * FROM favorite_journeys WHERE id = :id")
-    suspend fun getById(id: Long): FavoriteJourneyEntity?
 
     /**
      * Check for duplicate journey (same origin + destination, ignoring label)
