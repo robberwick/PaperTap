@@ -30,14 +30,14 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
 class AddTicketActivity : AppCompatActivity() {
 
     private lateinit var ticketRepository: TicketRepository
     private lateinit var favoriteJourneyRepository: com.robberwick.papertap.database.FavoriteJourneyRepository
     private lateinit var preferences: Preferences
+    private lateinit var qrExtractor: PdfQrExtractor
+
 
     private lateinit var qrCodePreview: ImageView
     private lateinit var nameValue: TextView
@@ -50,6 +50,11 @@ class AddTicketActivity : AppCompatActivity() {
     private lateinit var destinationCode: TextView
     private lateinit var cancelButton: Button
     private lateinit var addButton: Button
+    private lateinit var extractionState: View
+    private lateinit var extractionProgress: View
+    private lateinit var extractionErrorText: TextView
+    private lateinit var retryExtractionButton: Button
+
 
     private var extractedQrBitmap: Bitmap? = null
     private var extractedRawData: String? = null
@@ -59,6 +64,8 @@ class AddTicketActivity : AppCompatActivity() {
     private var selectedOriginStation: Station? = null
     private var selectedDestinationStation: Station? = null
     private var selectedTravelDate: Long? = null
+    private var currentDocumentUri: Uri? = null
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         if (BuildConfig.DEBUG) android.util.Log.d("AddTicketActivity", "onCreate - Activity starting")
@@ -73,6 +80,8 @@ class AddTicketActivity : AppCompatActivity() {
         ticketRepository = TicketRepository(this)
         favoriteJourneyRepository = com.robberwick.papertap.database.FavoriteJourneyRepository(this)
         preferences = Preferences(this)
+        qrExtractor = PdfQrExtractor(this)
+
 
         // Initialize StationLookup
         StationLookup.initialize(this)
@@ -89,6 +98,10 @@ class AddTicketActivity : AppCompatActivity() {
         destinationCode = findViewById(R.id.destinationCode)
         cancelButton = findViewById(R.id.cancelButton)
         addButton = findViewById(R.id.addButton)
+        extractionState = findViewById(R.id.extractionState)
+        extractionProgress = findViewById(R.id.extractionProgress)
+        extractionErrorText = findViewById(R.id.extractionErrorText)
+        retryExtractionButton = findViewById(R.id.retryExtractionButton)
 
         // Setup click listeners for tappable rows
         findViewById<View>(R.id.nameRow).setOnClickListener { showNameDialog() }
@@ -98,6 +111,10 @@ class AddTicketActivity : AppCompatActivity() {
         // Setup buttons
         cancelButton.setOnClickListener { finish() }
         addButton.setOnClickListener { addTicket() }
+        retryExtractionButton.setOnClickListener {
+            currentDocumentUri?.let(::processDocument)
+        }
+
 
         // Get document URI from intent
         val documentUriString = intent.getStringExtra("DOCUMENT_URI")
@@ -114,200 +131,147 @@ class AddTicketActivity : AppCompatActivity() {
     }
 
     private fun processDocument(uri: Uri) {
-        if (BuildConfig.DEBUG) android.util.Log.d("AddTicketActivity", "processDocument - URI: $uri")
-        if (BuildConfig.DEBUG) android.util.Log.d("AddTicketActivity", "processDocument - URI scheme: ${uri.scheme}")
-
-        // Check if this is an HTTP/HTTPS URL (shared from Firefox)
-        if (uri.scheme == "http" || uri.scheme == "https") {
-            if (BuildConfig.DEBUG) android.util.Log.d("AddTicketActivity", "Detected HTTP/HTTPS URL, downloading...")
-            Toast.makeText(this, "Downloading ticket...", Toast.LENGTH_SHORT).show()
-            downloadAndProcessPdf(uri)
-            return
-        }
-
-        // Handle local file URIs
-        val mimeType = contentResolver.getType(uri)
-        if (BuildConfig.DEBUG) android.util.Log.d("AddTicketActivity", "processDocument - MIME type: $mimeType")
-
+        currentDocumentUri = uri
         lifecycleScope.launch {
-            try {
-                val result = withContext(Dispatchers.IO) {
-                    if (mimeType == "application/pdf") {
-                        processPdf(uri)
-                    } else if (mimeType?.startsWith("image/") == true) {
-                        processImage(uri)
-                    } else {
-                        null
+            showExtractionLoading()
+            val result = withContext(Dispatchers.IO) { extractDocument(uri) }
+            when (result) {
+                is BarcodeExtractionResult.Success -> {
+                    hideExtractionState()
+                    extractedQrBitmap?.takeIf { it !== result.bitmap }?.recycle()
+                    extractedQrBitmap = result.bitmap
+                    extractedRawData = result.barcodeData.rawData
+                    extractedBarcodeFormat = result.barcodeData.barcodeFormat
+                    if (!checkForDuplicateAndAlert(result.barcodeData.rawData)) {
+                        displayPreview(result.bitmap)
                     }
                 }
-
-                if (result != null) {
-                    val (qrBitmap, barcodeData) = result
-                    extractedQrBitmap = qrBitmap
-                    extractedRawData = barcodeData.rawData
-                    extractedBarcodeFormat = barcodeData.barcodeFormat
-
-                    // Check for duplicate ticket
-                    if (checkForDuplicateAndAlert(barcodeData.rawData)) {
-                        return@launch
+                BarcodeExtractionResult.NoBarcode -> showExtractionError(
+                    getString(R.string.no_barcode_found),
+                )
+                is BarcodeExtractionResult.Error -> {
+                    result.cause?.let {
+                        android.util.Log.e("AddTicketActivity", result.message, it)
                     }
-
-                    displayPreview(qrBitmap)
-                } else {
-                    Toast.makeText(
-                        this@AddTicketActivity,
-                        "No QR code found in document",
-                        Toast.LENGTH_LONG
-                    ).show()
-                    finish()
+                    showExtractionError(result.message)
                 }
-            } catch (e: Exception) {
-                if (BuildConfig.DEBUG) e.printStackTrace()
-                Toast.makeText(
-                    this@AddTicketActivity,
-                    "Error processing document: ${e.message}",
-                    Toast.LENGTH_LONG
-                ).show()
-                finish()
             }
         }
     }
 
-    private fun downloadAndProcessPdf(url: Uri) {
-        lifecycleScope.launch {
-            try {
-                val tempFile = withContext(Dispatchers.IO) {
-                    // Create a temporary file for the downloaded PDF
-                    val tempFile = File.createTempFile("downloaded_ticket", ".pdf", cacheDir)
-                    if (BuildConfig.DEBUG) android.util.Log.d("AddTicketActivity", "Downloading to: ${tempFile.absolutePath}")
-
-                    // Download the PDF
-                    val connection = java.net.URL(url.toString()).openConnection() as java.net.HttpURLConnection
-                    connection.connect()
-
-                    if (connection.responseCode != java.net.HttpURLConnection.HTTP_OK) {
-                        throw Exception("Server returned HTTP ${connection.responseCode}")
-                    }
-
-                    connection.inputStream.use { input ->
-                        tempFile.outputStream().use { output ->
-                            input.copyTo(output)
-                        }
-                    }
-
-                    if (BuildConfig.DEBUG) android.util.Log.d("AddTicketActivity", "Download complete, file size: ${tempFile.length()} bytes")
-                    tempFile
-                }
-
-                // Convert to URI and process as PDF
-                val fileUri = Uri.fromFile(tempFile)
-                if (BuildConfig.DEBUG) android.util.Log.d("AddTicketActivity", "Processing downloaded PDF: $fileUri")
-
-                val result = withContext(Dispatchers.IO) {
-                    processPdf(fileUri)
-                }
-
-                // Clean up temp file
-                tempFile.delete()
-
-                if (result != null) {
-                    val (qrBitmap, barcodeData) = result
-                    extractedQrBitmap = qrBitmap
-                    extractedRawData = barcodeData.rawData
-                    extractedBarcodeFormat = barcodeData.barcodeFormat
-
-                    // Check for duplicate ticket
-                    if (checkForDuplicateAndAlert(barcodeData.rawData)) {
-                        return@launch
-                    }
-
-                    displayPreview(qrBitmap)
+    private suspend fun extractDocument(uri: Uri): BarcodeExtractionResult {
+        return if (uri.scheme == "http" || uri.scheme == "https") {
+            downloadAndExtractPdf(uri)
+        } else {
+            when (val mimeType = contentResolver.getType(uri)) {
+                "application/pdf" -> qrExtractor.extractQrCodeFromPdf(uri, preferences.getQrPadding())
+                else -> if (mimeType?.startsWith("image/") == true) {
+                    extractFromImage(uri)
                 } else {
-                    Toast.makeText(
-                        this@AddTicketActivity,
-                        "No QR code found in ticket",
-                        Toast.LENGTH_LONG
-                    ).show()
-                    finish()
+                    BarcodeExtractionResult.Error(getString(R.string.unsupported_document))
                 }
-            } catch (e: Exception) {
-                android.util.Log.e("AddTicketActivity", "Error downloading/processing PDF", e)
-                if (BuildConfig.DEBUG) e.printStackTrace()
-                Toast.makeText(
-                    this@AddTicketActivity,
-                    "Error downloading ticket: ${e.message}",
-                    Toast.LENGTH_LONG
-                ).show()
-                finish()
             }
         }
     }
 
-    private suspend fun processPdf(uri: Uri): Pair<Bitmap, BarcodeData>? {
-        val extractor = PdfQrExtractor(this)
-        val padding = preferences.getQrPadding()
-        return extractor.extractQrCodeFromPdf(uri, padding)
-    }
-
-    private suspend fun processImage(uri: Uri): Pair<Bitmap, BarcodeData>? {
-        val bitmap = contentResolver.openInputStream(uri)?.use { inputStream ->
-            BitmapFactory.decodeStream(inputStream)
-        } ?: return null
-
-        val padding = preferences.getQrPadding()
-        return extractQrFromBitmap(bitmap, padding)
-    }
-
-    private suspend fun extractQrFromBitmap(bitmap: Bitmap, padding: Int): Pair<Bitmap, BarcodeData>? = suspendCoroutine { continuation ->
-        val options = com.google.mlkit.vision.barcode.BarcodeScannerOptions.Builder()
-            .setBarcodeFormats(
-                com.google.mlkit.vision.barcode.common.Barcode.FORMAT_QR_CODE,
-                com.google.mlkit.vision.barcode.common.Barcode.FORMAT_AZTEC,
-                com.google.mlkit.vision.barcode.common.Barcode.FORMAT_DATA_MATRIX,
-                com.google.mlkit.vision.barcode.common.Barcode.FORMAT_PDF417
-            )
-            .build()
-
-        val scanner = com.google.mlkit.vision.barcode.BarcodeScanning.getClient(options)
-        val image = com.google.mlkit.vision.common.InputImage.fromBitmap(bitmap, 0)
-
-        scanner.process(image)
-            .addOnSuccessListener { barcodes ->
-                if (barcodes.isNotEmpty()) {
-                    val barcode = barcodes[0]
-                    val boundingBox = barcode.boundingBox
-                    val rawValue = barcode.rawValue
-
-                    if (rawValue == null) {
-                        continuation.resume(null)
-                        return@addOnSuccessListener
-                    }
-
-                    // Create BarcodeData object
-                    val barcodeData = BarcodeData(
-                        rawData = rawValue,
-                        barcodeFormat = barcode.format
+    private suspend fun downloadAndExtractPdf(url: Uri): BarcodeExtractionResult {
+        val tempFile = File.createTempFile("downloaded_ticket", ".pdf", cacheDir)
+        return try {
+            val connection = java.net.URL(url.toString()).openConnection() as java.net.HttpURLConnection
+            try {
+                connection.connectTimeout = 15_000
+                connection.readTimeout = 30_000
+                connection.instanceFollowRedirects = true
+                connection.connect()
+                if (connection.responseCode != java.net.HttpURLConnection.HTTP_OK) {
+                    return BarcodeExtractionResult.Error(
+                        "The ticket download returned HTTP ${connection.responseCode}",
                     )
-
-                    if (boundingBox != null) {
-                        val left = maxOf(0, boundingBox.left - padding)
-                        val top = maxOf(0, boundingBox.top - padding)
-                        val width = minOf(bitmap.width - left, boundingBox.width() + padding * 2)
-                        val height = minOf(bitmap.height - top, boundingBox.height() + padding * 2)
-
-                        val croppedBitmap = Bitmap.createBitmap(bitmap, left, top, width, height)
-                        continuation.resume(Pair(croppedBitmap, barcodeData))
-                    } else {
-                        continuation.resume(null)
-                    }
-                } else {
-                    continuation.resume(null)
                 }
+                connection.inputStream.use { input ->
+                    tempFile.outputStream().use { output -> input.copyTo(output) }
+                }
+            } finally {
+                connection.disconnect()
             }
-            .addOnFailureListener { e ->
-                if (BuildConfig.DEBUG) e.printStackTrace()
-                continuation.resume(null)
-            }
+            qrExtractor.extractQrCodeFromPdf(
+                Uri.fromFile(tempFile),
+                preferences.getQrPadding(),
+            )
+        } catch (e: Exception) {
+            BarcodeExtractionResult.Error("The ticket could not be downloaded", e)
+        } finally {
+            tempFile.delete()
+        }
+    }
+
+    private suspend fun extractFromImage(uri: Uri): BarcodeExtractionResult {
+        val bitmap = decodeSampledBitmap(uri)
+            ?: return BarcodeExtractionResult.Error("The image could not be opened")
+        return try {
+            qrExtractor.extractQrFromBitmap(bitmap, preferences.getQrPadding())
+        } finally {
+            bitmap.recycle()
+        }
+    }
+
+    private fun decodeSampledBitmap(uri: Uri): Bitmap? {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+
+        var sampleSize = 1
+        while (
+            bounds.outWidth / sampleSize > MAX_IMAGE_DIMENSION ||
+            bounds.outHeight / sampleSize > MAX_IMAGE_DIMENSION
+        ) {
+            sampleSize *= 2
+        }
+
+        val options = BitmapFactory.Options().apply {
+            inSampleSize = sampleSize
+            inPreferredConfig = Bitmap.Config.ARGB_8888
+        }
+        return contentResolver.openInputStream(uri)?.use {
+            BitmapFactory.decodeStream(it, null, options)
+        }
+    }
+
+    private fun showExtractionLoading() {
+        extractionState.visibility = View.VISIBLE
+        extractionProgress.visibility = View.VISIBLE
+        extractionErrorText.visibility = View.GONE
+        retryExtractionButton.visibility = View.GONE
+        addButton.isEnabled = false
+    }
+
+    private fun showExtractionError(message: String) {
+        extractionState.visibility = View.VISIBLE
+        extractionProgress.visibility = View.GONE
+        extractionErrorText.text = message
+        extractionErrorText.visibility = View.VISIBLE
+        retryExtractionButton.visibility = View.VISIBLE
+        addButton.isEnabled = false
+    }
+
+    private fun hideExtractionState() {
+        extractionState.visibility = View.GONE
+        addButton.isEnabled = true
+    }
+
+    override fun onDestroy() {
+        qrExtractor.close()
+        extractedQrBitmap?.recycle()
+        extractedQrBitmap = null
+        super.onDestroy()
+    }
+
+    private fun displayPreview(qrBitmap: Bitmap) {
+        qrCodePreview.setImageBitmap(qrBitmap)
+    }
+
+    companion object {
+        private const val MAX_IMAGE_DIMENSION = 2_000
     }
 
     private fun displayPreview(qrBitmap: Bitmap) {

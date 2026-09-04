@@ -1,11 +1,15 @@
 package com.robberwick.papertap
 
 import android.content.Intent
+
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
@@ -17,7 +21,6 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.snackbar.Snackbar
 import com.robberwick.papertap.database.TicketRepository
 import kotlinx.coroutines.launch
-import android.widget.TextView
 
 class TicketListActivity : AppCompatActivity() {
 
@@ -26,8 +29,8 @@ class TicketListActivity : AppCompatActivity() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var emptyStateText: TextView
 
-    companion object {
-        private const val REQUEST_PICK_DOCUMENT = 1001
+    private val openDocument = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let(::navigateToAddTicket)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -113,7 +116,12 @@ class TicketListActivity : AppCompatActivity() {
         when (intent.action) {
             Intent.ACTION_SEND -> {
                 // Try EXTRA_STREAM first (standard for file sharing)
-                var uri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+                var uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    intent.getParcelableExtra(Intent.EXTRA_STREAM)
+                }
                 if (BuildConfig.DEBUG) android.util.Log.d("TicketListActivity", "EXTRA_STREAM uri: $uri")
 
                 // Fallback: Try intent.data (some apps use this)
@@ -122,18 +130,12 @@ class TicketListActivity : AppCompatActivity() {
                     if (BuildConfig.DEBUG) android.util.Log.d("TicketListActivity", "Fallback to intent.data: $uri")
                 }
 
-                // Fallback: Try EXTRA_TEXT (might contain a URI string)
+                // Firefox and other browsers may share an HTTP(S) URL as text.
+                // Uri.parse accepts arbitrary text, so validate scheme + host.
                 if (uri == null) {
                     val text = intent.getStringExtra(Intent.EXTRA_TEXT)
-                    if (BuildConfig.DEBUG) android.util.Log.d("TicketListActivity", "EXTRA_TEXT: $text")
-                    if (text != null) {
-                        try {
-                            uri = Uri.parse(text)
-                            if (BuildConfig.DEBUG) android.util.Log.d("TicketListActivity", "Parsed URI from EXTRA_TEXT: $uri")
-                        } catch (e: Exception) {
-                            android.util.Log.e("TicketListActivity", "Failed to parse URI from EXTRA_TEXT", e)
-                        }
-                    }
+                    if (BuildConfig.DEBUG) android.util.Log.d("TicketListActivity", "EXTRA_TEXT received")
+                    uri = sharedWebUri(text)
                 }
 
                 if (uri != null) {
@@ -158,20 +160,14 @@ class TicketListActivity : AppCompatActivity() {
     }
 
     private fun openDocumentPicker() {
-        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-            addCategory(Intent.CATEGORY_OPENABLE)
-            type = "*/*"
-            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("image/*", "application/pdf"))
-        }
-        startActivityForResult(intent, REQUEST_PICK_DOCUMENT)
+        openDocument.launch(arrayOf("image/*", "application/pdf"))
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQUEST_PICK_DOCUMENT && resultCode == RESULT_OK) {
-            data?.data?.let { uri ->
-                navigateToAddTicket(uri)
-            }
+    private fun sharedWebUri(text: String?): Uri? {
+        if (text.isNullOrBlank()) return null
+        val candidate = Uri.parse(text.trim())
+        return candidate.takeIf {
+            (it.scheme == "http" || it.scheme == "https") && !it.host.isNullOrBlank()
         }
     }
 
