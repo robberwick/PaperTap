@@ -130,20 +130,20 @@ class NfcFlasher : AppCompatActivity() {
          */
         val ticketId = intent.getLongExtra("TICKET_ID", -1L)
 
-        Log.d("NfcFlasher", "onCreate - ticketId: $ticketId")
+        if (BuildConfig.DEBUG) Log.d("NfcFlasher", "onCreate - ticketId: $ticketId")
 
         if (ticketId != -1L) {
             // Load ticket from database
-            Log.d("NfcFlasher", "Loading ticket from database, ID: $ticketId")
+            if (BuildConfig.DEBUG) Log.d("NfcFlasher", "Loading ticket from database, ID: $ticketId")
             lifecycleScope.launch {
                 mTicketEntity = withContext(Dispatchers.IO) {
                     ticketRepository.getById(ticketId)
                 }
 
-                Log.d("NfcFlasher", "Ticket loaded: $mTicketEntity")
+                if (BuildConfig.DEBUG) Log.d("NfcFlasher", "Ticket loaded: $mTicketEntity")
 
                 if (mTicketEntity != null) {
-                    Log.d("NfcFlasher", "Ticket loaded: ${mTicketEntity!!.userLabel}")
+                    if (BuildConfig.DEBUG) Log.d("NfcFlasher", "Ticket loaded: ${mTicketEntity!!.userLabel}")
 
                     loadTicketImage(mTicketEntity!!)
                     displayTicketDetails(mTicketEntity!!)
@@ -412,7 +412,7 @@ class NfcFlasher : AppCompatActivity() {
                     Log.v("Flash result", "Success = $success")
                     tntag?.close()
                 } catch (e: IOException) {
-                    e.printStackTrace()
+                    if (BuildConfig.DEBUG) e.printStackTrace()
                     Log.e("NfcFlasher", "Error closing tag", e)
                 }
 
@@ -483,7 +483,7 @@ class NfcFlasher : AppCompatActivity() {
     
     private fun playStartSound() {
         try {
-            Log.d("NfcFlasher", "Playing start sound")
+            if (BuildConfig.DEBUG) Log.d("NfcFlasher", "Playing start sound")
             val mp = MediaPlayer.create(this, RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
             mp?.setOnCompletionListener { it.release() }
             mp?.start()
@@ -494,7 +494,7 @@ class NfcFlasher : AppCompatActivity() {
     
     private fun playSuccessSound() {
         try {
-            Log.d("NfcFlasher", "Playing success sound (Mario coin)")
+            if (BuildConfig.DEBUG) Log.d("NfcFlasher", "Playing success sound (Mario coin)")
             Thread {
                 try {
                     playTone(988.0, 80)
@@ -511,7 +511,7 @@ class NfcFlasher : AppCompatActivity() {
     
     private fun playErrorSound() {
         try {
-            Log.d("NfcFlasher", "Playing error sound (sad trombone)")
+            if (BuildConfig.DEBUG) Log.d("NfcFlasher", "Playing error sound (sad trombone)")
             Thread {
                 try {
                     // Sad trombone: Three descending notes - womp womp wommmmp
@@ -532,7 +532,7 @@ class NfcFlasher : AppCompatActivity() {
     
     private fun playTone(frequencyHz: Double, durationMs: Int) {
         try {
-            Log.d("NfcFlasher", "Playing tone: ${frequencyHz}Hz for ${durationMs}ms")
+            if (BuildConfig.DEBUG) Log.d("NfcFlasher", "Playing tone: ${frequencyHz}Hz for ${durationMs}ms")
             val sampleRate = 44100
             val numSamples = (durationMs * sampleRate / 1000)
             val samples = ShortArray(numSamples)
@@ -588,7 +588,7 @@ class NfcFlasher : AppCompatActivity() {
                 )
             }
             
-            Log.d("NfcFlasher", "AudioTrack state: ${audioTrack.state}, playState: ${audioTrack.playState}")
+            if (BuildConfig.DEBUG) Log.d("NfcFlasher", "AudioTrack state: ${audioTrack.state}, playState: ${audioTrack.playState}")
             audioTrack.write(samples, 0, samples.size)
             audioTrack.play()
             
@@ -597,7 +597,7 @@ class NfcFlasher : AppCompatActivity() {
             
             audioTrack.stop()
             audioTrack.release()
-            Log.d("NfcFlasher", "Tone completed")
+            if (BuildConfig.DEBUG) Log.d("NfcFlasher", "Tone completed")
         } catch (e: Exception) {
             Log.e("NfcFlasher", "Failed to play tone", e)
         }
@@ -616,7 +616,7 @@ class NfcFlasher : AppCompatActivity() {
             if (showStationCodes && !ticket.originStationCode.isNullOrEmpty() && !ticket.destinationStationCode.isNullOrEmpty()) {
                 val stationCodesText = "${ticket.originStationCode} → ${ticket.destinationStationCode}"
                 labels.add(BarcodeLabel(stationCodesText, sizeMultiplier = 1.0f))
-                Log.d("NfcFlasher", "Adding station codes to barcode: $stationCodesText (50% size)")
+                if (BuildConfig.DEBUG) Log.d("NfcFlasher", "Adding station codes to barcode: $stationCodesText (50% size)")
             }
 
             // Add travel date if enabled and available (70% smaller)
@@ -625,11 +625,11 @@ class NfcFlasher : AppCompatActivity() {
                 val dateFormat = java.text.SimpleDateFormat("d MMM yyyy", java.util.Locale.getDefault())
                 val dateText = dateFormat.format(java.util.Date(ticket.travelDate))
                 labels.add(BarcodeLabel(dateText, sizeMultiplier = 1.0f))
-                Log.d("NfcFlasher", "Adding travel date to barcode: $dateText (70% smaller)")
+                if (BuildConfig.DEBUG) Log.d("NfcFlasher", "Adding travel date to barcode: $dateText (70% smaller)")
             }
 
-            Log.d("NfcFlasher", "loadTicketImage - Regenerating from raw barcode data")
-            Log.d("NfcFlasher", "loadTicketImage - labels: $labels")
+            if (BuildConfig.DEBUG) Log.d("NfcFlasher", "loadTicketImage - Regenerating from raw barcode data")
+            if (BuildConfig.DEBUG) Log.d("NfcFlasher", "loadTicketImage - labels: $labels")
 
             // Generate barcode with labels
             this.mBitmap = BarcodeGenerator.generateBarcodeWithLabel(
@@ -651,7 +651,7 @@ class NfcFlasher : AppCompatActivity() {
             val imagePreviewElem: ImageView = findViewById(R.id.previewImageView)
             imagePreviewElem.setImageBitmap(this.mBitmap)
 
-            Log.d("NfcFlasher", "Successfully regenerated bitmap from raw barcode data")
+            if (BuildConfig.DEBUG) Log.d("NfcFlasher", "Successfully regenerated bitmap from raw barcode data")
         } catch (e: Exception) {
             Log.e("NfcFlasher", "Failed to regenerate barcode", e)
             Toast.makeText(this, "Failed to generate barcode: ${e.message}", Toast.LENGTH_LONG).show()
