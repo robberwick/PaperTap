@@ -117,7 +117,7 @@ class EditTicketActivity : AppCompatActivity() {
 
         // Set origin station
         if (ticket.originStationCode != null) {
-            val originStation = StationLookup.getAllStations().find { it.code == ticket.originStationCode }
+            val originStation = StationLookup.findStation(ticket.originStationCode)
             if (originStation != null) {
                 selectedOriginStation = originStation
             }
@@ -125,7 +125,7 @@ class EditTicketActivity : AppCompatActivity() {
 
         // Set destination station
         if (ticket.destinationStationCode != null) {
-            val destStation = StationLookup.getAllStations().find { it.code == ticket.destinationStationCode }
+            val destStation = StationLookup.findStation(ticket.destinationStationCode)
             if (destStation != null) {
                 selectedDestinationStation = destStation
             }
