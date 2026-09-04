@@ -107,7 +107,7 @@ class ManageDisplaysActivity : AppCompatActivity() {
 
     private fun setupSwipeToDelete() {
         val callback = SwipeToDeleteCallback(this) { viewHolder, _ ->
-            val position = viewHolder.bindingAdapterPosition
+            val position = viewHolder.adapterPosition
             if (position == RecyclerView.NO_POSITION) {
                 displayAdapter.notifyDataSetChanged()
             } else {
