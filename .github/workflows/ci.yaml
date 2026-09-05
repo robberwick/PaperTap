@@ -28,6 +28,14 @@ jobs:
           restore-keys: |
             gradle-${{ runner.os }}-
 
+      - name: install committed debug keystore
+        run: |
+          mkdir -p ~/.android
+          cp keystore/debug.keystore ~/.android/debug.keystore
+          echo "storePassword=android" > ~/.android/keystore.properties
+          echo "keyAlias=androiddebugkey" >> ~/.android/keystore.properties
+          echo "keyPassword=android" >> ~/.android/keystore.properties
+
       - name: set up Android SDK
         uses: android-actions/setup-android@v3
 
