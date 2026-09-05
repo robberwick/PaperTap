@@ -37,4 +37,9 @@
     <string name="experimental_display_model_warning">%1$s — unverified on hardware; the display may not update correctly</string>
 
 
+    <!-- Ticket extraction -->
+    <string name="extracting_ticket">Extracting barcode…</string>
+    <string name="no_barcode_found">No QR or Aztec code was found. Try another image or PDF.</string>
+    <string name="unsupported_document">PaperTap can extract tickets from PDF and image files.</string>
+    <string name="retry_extraction">Retry</string>
 </resources>
