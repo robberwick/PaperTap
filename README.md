@@ -14,12 +14,13 @@ PaperTap is an Android application that extracts barcodes from train tickets, ev
 
 ## Target Hardware
 
-- **Display**: WaveShare 1.54" Passive NFC-Powered E-Paper (200×200px)
+- **Display**: WaveShare 1.54" Passive NFC-Powered E-Paper (200×200px, black/white/red) — the only model verified on real hardware
 - **Phone**: Any Android device with NFC capability (API 21+)
 - **Tag Type**: NFC-A compatible displays
 
-Get the display: [WaveShare 1.54" NFC E-Paper]
+Other WaveShare NFC e-paper models can be selected in Settings behind an experimental toggle, but they have not been verified on hardware and may not update correctly.
 
+Get the display: [WaveShare 1.54" NFC-Powered e-Paper]
 
 ## Features
 
@@ -43,9 +44,9 @@ Get the display: [WaveShare 1.54" NFC E-Paper]
 ### Display & Writing
 
 ✅ **Multiple barcode formats** - Supports QR Code, Aztec, Data Matrix, PDF417  
-✅ **Multiple display sizes** - Various WaveShare e-paper formats supported  
 ✅ **Crisp output** - Pure black/white rendering for reliable scanning  
 ✅ **Configurable padding** - Adjust barcode margins via settings  
+✅ **Optional image text** - Render station codes or the travel date beneath the barcode
 ✅ **Audio feedback** - Distinct sounds for start, success, and errors  
 ✅ **Quick reflash** - Tap any ticket to write to display  
 ✅ **Display tracking** - See which display each ticket is currently on  
@@ -91,43 +92,61 @@ Get the display: [WaveShare 1.54" NFC E-Paper]
 - **Clear labels**: Reset a display name back to its hex UID
 - **Delete displays**: Remove displays you no longer use
 
-Access display management via Settings → Manage Displays
+Access display management via the menu (⋮) → Manage Displays
 
 ## Building & Installation
 
-### Quick Build (Docker)
+### Gradle (recommended)
 
-Requires [Docker Engine] installed with ~5GB memory and 3GB disk space.
+Requires JDK 17 and the Android SDK (compileSdk 35):
 
 ```bash
-# Download Dockerfile
-curl -OL https://raw.githubusercontent.com/robberwick/PaperTap/main/Dockerfile
+# Build the debug APK
+bash gradlew assembleDebug
 
-# Build APK
-docker build --output type=local,dest=. .
+# Output
+app/build/outputs/apk/debug/papertap-debug.apk
+```
 
-# Install app-debug.apk on your Android device
+Lint and unit tests use the same tasks CI runs:
+
+```bash
+bash gradlew lint
+bash gradlew testDebugUnitTest
 ```
 
 ### Android Studio
 
 Open the project in [Android Studio] and build via Build → Build Bundle(s) / APK(s) → Build APK(s).
 
-[Docker Engine]: https://docs.docker.com/engine/install/
-[Android Studio]: https://developer.android.com/studio
+### CI Artifacts
+
+Every push and pull request runs [GitHub Actions CI] (lint, unit tests, assemble), which publishes the debug APK and the exported Room schema as artifacts.
+
+### Docker (not for PaperTap)
+
+The `Dockerfile` in this repo still builds the upstream [mk-fg] project at a pinned commit — it does **not** produce a PaperTap APK. Use the Gradle or Android Studio builds above.
 
 ## Installation
 
-Transfer the `app-debug.apk` to your Android device and install it. You'll need to enable installation from unknown sources in your device settings.
+Transfer the `papertap-debug.apk` to your Android device and install it. You'll need to enable installation from unknown sources in your device settings.
+
+Debug builds are signed with the debug keystore committed to this repo, so a newly built APK installs over an existing PaperTap debug install without uninstalling first.
 
 **Requirements**: Android 5.0+ (API level 21 or higher)
 
 ## Settings
 
-Access via the menu (⋮) in the top-right corner:
+Access via the menu (⋮) → Settings in the top-right corner:
 
-- **Display Size**: Choose from supported WaveShare displays (defaults to 1.54" 200×200)
-- **Barcode Padding**: Adjust white border around barcode (0-50 pixels)
+- **Display model**: Which WaveShare NFC e-paper to write to. Defaults to the hardware-verified 1.54" B (200×200, black/white/red)
+- **Show experimental display models**: Off by default. When enabled, the display-model picker lists the other WaveShare models (2.13", 2.7", 2.9", 4.2", 7.5", 7.5" HD, 2.13" B) — these have not been verified on hardware and the display may not update correctly
+- **Edge Padding**: White border around the barcode (0–50 pixels, default 5)
+- **Show Station Codes**: Display origin → destination station codes on the NFC image
+- **Show Travel Date**: Display the travel date on the NFC image
+
+Also available from the menu (⋮):
+
 - **Favorite Journeys**: Manage saved station pairs (up to 50 favorites)
 - **Manage Displays**: Label and track your NFC e-paper displays
 
@@ -142,29 +161,31 @@ Access via the menu (⋮) in the top-right corner:
 
 **NFC radio dying** - Some Android devices experience NFC chipset failures at the system level. This appears in logs as `android.os.DeadObjectException`. Toggle NFC off/on to recover.
 
+**Experimental display models** - Only the 1.54" B display is verified against real hardware. Other models are implemented from the WaveShare protocol but untested; if one fails to update, switch back to the default model.
+
 ## Technical Details
 
 **Built with:**
 
-- Kotlin + Android SDK (API 21+, targets API 35)
+- Kotlin + Android SDK (minSdk 21, targets API 35)
 - Room database for ticket persistence
 - ML Kit Barcode Scanning for barcode detection (QR, Aztec, Data Matrix, PDF417)
 - ZXing for barcode generation and rendering
 - Android PdfRenderer for PDF processing
-- WaveShare NFC SDK for e-paper communication
+- Clean-room WaveShare NFC protocol implementation for e-paper communication (no proprietary SDK)
 - Material Design 3 UI components
 
 **Key technologies:**
 
-- Room database with LiveData for reactive ticket management
+- Room database (schema v9, exported and versioned in `app/schemas`) with LiveData for reactive ticket management
 - Many-to-many ticket-to-display relationship tracking
 - ML Kit barcode scanning with multiple format support
 - ZXing barcode generation from stored raw data
 - Threshold-based image processing for crisp barcode rendering
+- ViewModel-scoped coroutines with StateFlow for rotation-safe NFC writes
 - Foreground NFC dispatch for tag interception
 - Hex UID-based display identification
 - AudioTrack API for custom success/error sounds
-- Kotlin coroutines for async operations
 - Station code lookup with autocomplete search
 
 ## Project Origins
@@ -180,8 +201,11 @@ PaperTap is a focused fork of [joshuatz/nfc-epaper-writer], which was itself ada
 
 See [LICENSE] and [NOTICE] for complete MIT License details.
 
-[joshuatz/nfc-epaper-writer]: https://github.com/joshuatz/nfc-epaper-writer
+[WaveShare 1.54" NFC-Powered e-Paper]: https://www.waveshare.com/1.54inch-nfc-powered-e-paper-bw.htm
+[Android Studio]: https://developer.android.com/studio
+[GitHub Actions CI]: https://github.com/robberwick/PaperTap/actions
 [mk-fg]: https://github.com/mk-fg/nfc-epaper-writer
+[joshuatz/nfc-epaper-writer]: https://github.com/joshuatz/nfc-epaper-writer
 [DevPika]: https://github.com/DevPika/nfc-epaper-writer-update
 [LICENSE]: LICENSE
 [NOTICE]: NOTICE
