@@ -49,8 +49,6 @@ class NfcFlasher : AppCompatActivity() {
             if (isFlashing) {
                 window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                 statusText.text = getString(R.string.status_writing_ticket)
-                statusProgressIndicator.isIndeterminate = false
-                statusProgressIndicator.max = 100
                 statusProgressIndicator.progress = 0
                 statusProgressIndicator.visibility = android.view.View.VISIBLE
             } else {
