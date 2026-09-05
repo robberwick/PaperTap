@@ -40,7 +40,7 @@ class NfcFlasher : AppCompatActivity() {
     private lateinit var ticketRepository: TicketRepository
     private lateinit var flashViewModel: NfcFlashViewModel
     private lateinit var statusText: TextView
-    private lateinit var statusProgressIndicator: com.google.android.material.progressindicator.CircularProgressIndicator
+    private lateinit var statusProgressIndicator: com.google.android.material.progressindicator.LinearProgressIndicator
 
     private var mIsFlashing = false
         set(isFlashing) {
