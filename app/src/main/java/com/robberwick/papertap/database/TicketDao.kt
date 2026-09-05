@@ -5,11 +5,13 @@ import androidx.room.*
 
 @Dao
 interface TicketDao {
+    @Transaction
     @Query("SELECT * FROM tickets ORDER BY addedAt DESC")
-    fun getAllTickets(): LiveData<List<TicketEntity>>
+    fun getTicketsWithDisplays(): LiveData<List<TicketWithDisplays>>
 
-    @Query("SELECT * FROM tickets ORDER BY addedAt DESC")
-    suspend fun getAllTicketsSync(): List<TicketEntity>
+    @Query("UPDATE tickets SET lastFlashedAt = :timestamp, flashCount = flashCount + 1 WHERE id = :ticketId")
+    suspend fun recordFlashEvent(ticketId: Long, timestamp: Long)
+
 
     @Insert
     suspend fun insert(ticket: TicketEntity): Long
@@ -23,8 +25,6 @@ interface TicketDao {
     @Query("SELECT * FROM tickets WHERE id = :id")
     suspend fun getById(id: Long): TicketEntity?
 
-    @Query("DELETE FROM tickets WHERE id = :id")
-    suspend fun deleteById(id: Long)
 
     /**
      * Find a duplicate ticket by raw barcode data

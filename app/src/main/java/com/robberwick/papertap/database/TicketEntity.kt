@@ -1,9 +1,16 @@
 package com.robberwick.papertap.database
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "tickets")
+@Entity(
+    tableName = "tickets",
+    indices = [
+        Index(value = ["rawBarcodeData"]),
+        Index(value = ["addedAt"]),
+    ],
+)
 data class TicketEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
@@ -24,6 +31,5 @@ data class TicketEntity(
 
     // Usage tracking
     val flashCount: Int = 0,
-    val flashHistory: String? = null, // JSON array of timestamps
     val isFavorite: Boolean = false
 )

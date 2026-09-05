@@ -24,9 +24,6 @@ class FavoriteJourneyRepository(context: Context) {
         favoriteJourneyDao.deleteById(id)
     }
 
-    suspend fun getById(id: Long): FavoriteJourneyEntity? {
-        return favoriteJourneyDao.getById(id)
-    }
 
     suspend fun getFavoritesCount(): Int {
         return favoriteJourneyDao.getFavoritesCount()

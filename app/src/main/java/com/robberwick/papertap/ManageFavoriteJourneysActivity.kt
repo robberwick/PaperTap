@@ -1,7 +1,5 @@
 package com.robberwick.papertap
 
-import android.graphics.Canvas
-import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.view.View
 import android.widget.AutoCompleteTextView
@@ -10,7 +8,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -98,68 +95,18 @@ class ManageFavoriteJourneysActivity : AppCompatActivity() {
     }
 
     private fun setupSwipeToDelete() {
-        val deleteIcon = ContextCompat.getDrawable(this, android.R.drawable.ic_menu_delete)
-        val background = ColorDrawable(ContextCompat.getColor(this, android.R.color.holo_red_light))
-
-        val itemTouchHelperCallback = object : ItemTouchHelper.SimpleCallback(
-            0, ItemTouchHelper.LEFT
-        ) {
-            override fun onMove(
-                recyclerView: RecyclerView,
-                viewHolder: RecyclerView.ViewHolder,
-                target: RecyclerView.ViewHolder
-            ): Boolean = false
-
-            override fun getSwipeThreshold(viewHolder: RecyclerView.ViewHolder): Float = 0.5f
-
-            override fun onChildDraw(
-                c: Canvas,
-                recyclerView: RecyclerView,
-                viewHolder: RecyclerView.ViewHolder,
-                dX: Float,
-                dY: Float,
-                actionState: Int,
-                isCurrentlyActive: Boolean
-            ) {
-                val itemView = viewHolder.itemView
-                val iconMargin = (itemView.height - deleteIcon!!.intrinsicHeight) / 2
-                val iconTop = itemView.top + (itemView.height - deleteIcon.intrinsicHeight) / 2
-                val iconBottom = iconTop + deleteIcon.intrinsicHeight
-
-                if (dX < 0) {
-                    val iconLeft = itemView.right - iconMargin - deleteIcon.intrinsicWidth
-                    val iconRight = itemView.right - iconMargin
-                    deleteIcon.setBounds(iconLeft, iconTop, iconRight, iconBottom)
-
-                    background.setBounds(
-                        itemView.right + dX.toInt(),
-                        itemView.top,
-                        itemView.right,
-                        itemView.bottom
-                    )
-                } else {
-                    background.setBounds(0, 0, 0, 0)
-                    deleteIcon.setBounds(0, 0, 0, 0)
-                }
-
-                background.draw(c)
-                deleteIcon.draw(c)
-
-                super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive)
-            }
-
-            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
-                val position = viewHolder.adapterPosition
+        val callback = SwipeToDeleteCallback(this) { viewHolder, _ ->
+            val position = viewHolder.adapterPosition
+            if (position == RecyclerView.NO_POSITION) {
+                favoriteAdapter.notifyDataSetChanged()
+            } else {
                 val favorite = favoriteAdapter.getFavoriteAt(position)
-
-                // Delete with undo option
                 lifecycleScope.launch {
                     favoriteJourneyRepository.delete(favorite)
-
                     Snackbar.make(
                         recyclerView,
                         "Favorite deleted",
-                        Snackbar.LENGTH_LONG
+                        Snackbar.LENGTH_LONG,
                     ).setAction("UNDO") {
                         lifecycleScope.launch {
                             favoriteJourneyRepository.insert(favorite)
@@ -168,9 +115,9 @@ class ManageFavoriteJourneysActivity : AppCompatActivity() {
                 }
             }
         }
-
-        ItemTouchHelper(itemTouchHelperCallback).attachToRecyclerView(recyclerView)
+        ItemTouchHelper(callback).attachToRecyclerView(recyclerView)
     }
+
 
     private fun showAddFavoriteDialog() {
         // Show journey selection dialog

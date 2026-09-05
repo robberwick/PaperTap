@@ -1,9 +1,13 @@
 package com.robberwick.papertap.database
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "favorite_journeys")
+@Entity(
+    tableName = "favorite_journeys",
+    indices = [Index(value = ["originStationCode", "destinationStationCode"])],
+)
 data class FavoriteJourneyEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
