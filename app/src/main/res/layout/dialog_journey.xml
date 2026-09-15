@@ -44,7 +44,7 @@
             android:visibility="visible">
 
             <!-- RecyclerView for favorites list -->
-            <androidx.recyclerview.widget.RecyclerView
+            <com.robberwick.papertap.MaxHeightRecyclerView
                 android:id="@+id/favoritesRecyclerView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

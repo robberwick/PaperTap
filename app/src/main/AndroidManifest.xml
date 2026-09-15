@@ -3,6 +3,7 @@
 
     <uses-permission android:name="android.permission.NFC" /> <!-- This will prevent app from **showing** in app-store for phones without NFC -->
     <uses-permission android:name="android.permission.INTERNET" /> <!-- Required for downloading PDFs from URLs -->
+    <uses-permission android:name="android.permission.VIBRATE" /> <!-- Required for flash success/failure haptic feedback -->
     <uses-feature
         android:name="android.hardware.nfc"
         android:required="true" />

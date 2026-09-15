@@ -56,6 +56,7 @@ class TicketAdapter(
         private val journeyText: TextView = itemView.findViewById(R.id.ticketJourney)
         private val usageInfoText: TextView = itemView.findViewById(R.id.usageInfo)
         private val lastFlashedDisplayText: TextView = itemView.findViewById(R.id.lastFlashedDisplayText)
+        private val editButton: android.widget.ImageButton = itemView.findViewById(R.id.editTicketButton)
 
         fun bind(
             item: TicketWithDisplays,
@@ -72,10 +73,19 @@ class TicketAdapter(
             bindUsage(ticket)
             lastFlashedDisplayText.text = displaySummary(item)
 
+            // C6: dim tickets whose travel date has passed
+            val isExpired = ticket.travelDate != null &&
+                ticket.travelDate < System.currentTimeMillis()
+            cardView.alpha = if (isExpired) 0.55f else 1f
+
             itemView.setOnClickListener { onTicketClick(ticket) }
             itemView.setOnLongClickListener {
                 onTicketLongClick?.invoke(ticket)
                 true
+            }
+            // C7: visible edit affordance in addition to long-press
+            editButton.setOnClickListener {
+                onTicketLongClick?.invoke(ticket)
             }
         }
 

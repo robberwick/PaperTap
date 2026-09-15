@@ -196,20 +196,27 @@ class ManageFavoriteJourneysActivity : AppCompatActivity() {
                 val label = labelInput.text?.toString()?.trim() ?: defaultLabel
 
                 lifecycleScope.launch {
-                    val count = favoriteJourneyRepository.getFavoritesCount()
-                    if (count >= 50) {
-                        Toast.makeText(
-                            this@ManageFavoriteJourneysActivity,
-                            "Maximum 50 favorites. Delete old favorites to add more.",
-                            Toast.LENGTH_LONG
-                        ).show()
-                    } else {
-                        favoriteJourneyRepository.insertFavorite(originCode, destCode, label)
-                        Toast.makeText(
-                            this@ManageFavoriteJourneysActivity,
-                            "Favorite saved",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                    when (
+                        favoriteJourneyRepository.insertFavoriteWithLimit(
+                            originCode,
+                            destCode,
+                            label,
+                        )
+                    ) {
+                        FavoriteJourneyRepository.SaveFavoriteResult.LimitReached -> {
+                            Toast.makeText(
+                                this@ManageFavoriteJourneysActivity,
+                                "Maximum 50 favorites. Delete old favorites to add more.",
+                                Toast.LENGTH_LONG,
+                            ).show()
+                        }
+                        is FavoriteJourneyRepository.SaveFavoriteResult.Saved -> {
+                            Toast.makeText(
+                                this@ManageFavoriteJourneysActivity,
+                                "Favorite saved",
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        }
                     }
                 }
             }
@@ -260,7 +267,7 @@ class ManageFavoriteJourneysActivity : AppCompatActivity() {
                     Toast.makeText(
                         this@ManageFavoriteJourneysActivity,
                         "Label updated",
-                        Toast.LENGTH_SHORT
+                        Toast.LENGTH_SHORT,
                     ).show()
                 }
             }
@@ -271,11 +278,15 @@ class ManageFavoriteJourneysActivity : AppCompatActivity() {
     private fun deleteFavorite(favorite: FavoriteJourneyEntity) {
         lifecycleScope.launch {
             favoriteJourneyRepository.delete(favorite)
-            Toast.makeText(
-                this@ManageFavoriteJourneysActivity,
+            Snackbar.make(
+                recyclerView,
                 "Favorite deleted",
-                Toast.LENGTH_SHORT
-            ).show()
+                Snackbar.LENGTH_LONG,
+            ).setAction("UNDO") {
+                lifecycleScope.launch {
+                    favoriteJourneyRepository.insert(favorite)
+                }
+            }.show()
         }
     }
 }

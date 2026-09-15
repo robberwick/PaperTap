@@ -99,3 +99,15 @@ val MIGRATION_8_9 = object : Migration(8, 9) {
         )
     }
 }
+
+val MIGRATION_9_10 = object : Migration(9, 10) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        // C8: persist the default-label flag instead of guessing by string
+        // comparison at bind time. Existing rows default to false; a legacy
+        // default-labeled favorite will simply display its label until
+        // re-saved, since station names cannot be recomputed inside SQL.
+        database.execSQL(
+            "ALTER TABLE `favorite_journeys` ADD COLUMN `isDefaultLabel` INTEGER NOT NULL DEFAULT 0",
+        )
+    }
+}

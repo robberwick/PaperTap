@@ -1,6 +1,7 @@
 package com.robberwick.papertap
 
 import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.Bitmap
@@ -16,6 +17,9 @@ import android.nfc.tech.NfcA
 import android.os.Build
 import android.os.Bundle
 import android.os.PatternMatcher
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.util.Log
 import android.widget.ImageView
 import android.widget.TextView
@@ -40,6 +44,7 @@ class NfcFlasher : AppCompatActivity() {
     private lateinit var ticketRepository: TicketRepository
     private lateinit var flashViewModel: NfcFlashViewModel
     private lateinit var statusText: TextView
+    private lateinit var displayModelText: TextView
     private lateinit var statusProgressIndicator: com.google.android.material.progressindicator.LinearProgressIndicator
 
     private var mIsFlashing = false
@@ -85,6 +90,7 @@ class NfcFlasher : AppCompatActivity() {
 
         // Initialize status UI elements
         statusText = findViewById(R.id.statusText)
+        displayModelText = findViewById(R.id.displayModelText)
         statusProgressIndicator = findViewById(R.id.statusProgressIndicator)
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -92,7 +98,21 @@ class NfcFlasher : AppCompatActivity() {
             }
         }
 
+        // C2: surface the selected display model on the flash screen
+        refreshDisplayModelLabel()
 
+        // C3: one-time onboarding dialog; the status line doubles as the
+        // persistent "how to hold the display" hint until first write.
+        statusText.text = getString(R.string.onboarding_hint)
+        val onboardingPreferences = Preferences(this)
+        if (!onboardingPreferences.isOnboardingShown()) {
+            onboardingPreferences.setOnboardingShown()
+            androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(R.string.welcome_title)
+                .setMessage(getString(R.string.welcome_message) + "\n\n" + getString(R.string.onboarding_hint))
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+        }
         /**
          * Load ticket from database
          */
@@ -101,7 +121,6 @@ class NfcFlasher : AppCompatActivity() {
         if (BuildConfig.DEBUG) Log.d("NfcFlasher", "onCreate - ticketId: $ticketId")
 
         if (ticketId != -1L) {
-            // Load ticket from database
             if (BuildConfig.DEBUG) Log.d("NfcFlasher", "Loading ticket from database, ID: $ticketId")
             lifecycleScope.launch {
                 mTicketEntity = withContext(Dispatchers.IO) {
@@ -125,56 +144,40 @@ class NfcFlasher : AppCompatActivity() {
             finish()
         }
 
-        /**
-         * Actual flasher stuff
-         */
-
-        // Action card elements are accessed directly when needed via findViewById
-
         // Set up intent and intent filters for NFC / NDEF scanning
         // This is part of the setup for foreground dispatch system
         val nfcIntent = Intent(this, javaClass).apply {
             addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
         }
         this.mPendingIntent = PendingIntent.getActivity(this, 0, nfcIntent, PendingIntent.FLAG_MUTABLE)
-        // Set up the filters
         val ndefIntentFilter = IntentFilter(NfcAdapter.ACTION_NDEF_DISCOVERED)
         try {
-            // android:host
             ndefIntentFilter.addDataAuthority("ext", null)
-
-            // android:pathPattern
-            // allow all data paths - see notes below
             ndefIntentFilter.addDataPath(".*", PatternMatcher.PATTERN_SIMPLE_GLOB)
-            // NONE of the below work, although at least one or more should
-            // I think because the payload isn't getting extracted out into the intent by Android
-            // Debugging shows mData.path = null, which makes no sense (it definitely is not, and if
-            // I don't intercept AAR, Android definitely tries to open the corresponding app...
-            //ndefIntentFilter.addDataPath("waveshare.feng.nfctag.*", PatternMatcher.PATTERN_SIMPLE_GLOB);
-            //ndefIntentFilter.addDataPath(".*waveshare\\.feng\\.nfctag.*", PatternMatcher.PATTERN_SIMPLE_GLOB);
-            //ndefIntentFilter.addDataPath("waveshare.feng.nfctag", PatternMatcher.PATTERN_LITERAL);
-            //ndefIntentFilter.addDataPath("waveshare\\.feng\\.nfctag", PatternMatcher.PATTERN_LITERAL);
-
-            // android:scheme
             ndefIntentFilter.addDataScheme("vnd.android.nfc")
         } catch (_: IntentFilter.MalformedMimeTypeException) {
             Log.e("mimeTypeException", "Invalid / Malformed mimeType")
         }
         mNfcIntentFilters = arrayOf(ndefIntentFilter)
 
-        // Init NFC adapter
         mNfcAdapter = NfcAdapter.getDefaultAdapter(this)
         if (mNfcAdapter == null) {
             Toast.makeText(this, "NFC is not available on this device.", Toast.LENGTH_LONG).show()
         }
+    }
 
+    private fun refreshDisplayModelLabel() {
+        displayModelText.text = getString(
+            R.string.status_display_model,
+            Preferences(this).getDisplayModel().label,
+        )
     }
     
     override fun onSupportNavigateUp(): Boolean {
         finish()
         return true
     }
-    
+
     override fun onPause() {
         disableForegroundDispatch()
         super.onPause()
@@ -182,6 +185,7 @@ class NfcFlasher : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        refreshDisplayModelLabel()
         enableForegroundDispatch()
     }
 
@@ -247,28 +251,81 @@ class NfcFlasher : AppCompatActivity() {
 
     private fun rejectTag(message: String) {
         playErrorSound()
-        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+        flashHaptic(success = false)
+        setStatusCardState(message, isError = true)
     }
 
     private fun renderFlashState(state: FlashState) {
         when (state) {
-            FlashState.Idle -> mIsFlashing = false
+            FlashState.Idle -> {
+                mIsFlashing = false
+                setStatusCardState(getString(R.string.status_tap_to_write), isError = false)
+            }
             is FlashState.Writing -> {
                 mIsFlashing = true
                 updateProgressBar(state.progress)
+                setStatusCardState(getString(R.string.status_writing_ticket), isError = false)
             }
             is FlashState.Success -> {
                 mIsFlashing = false
                 playSuccessSound()
-                Toast.makeText(this, "Success! Flashed display!", Toast.LENGTH_LONG).show()
+                flashHaptic(success = true)
+                setStatusCardState(getString(R.string.status_success), isError = false)
                 flashViewModel.consumeTerminalState()
             }
             is FlashState.Error -> {
                 mIsFlashing = false
                 playErrorSound()
-                Toast.makeText(this, state.message, Toast.LENGTH_LONG).show()
+                flashHaptic(success = false)
+                setStatusCardState(state.message, isError = true)
                 flashViewModel.consumeTerminalState()
             }
+        }
+    }
+
+    private fun setStatusCardState(message: String, isError: Boolean) {
+        statusText.text = message
+        statusText.setTextColor(
+            if (isError) {
+                com.google.android.material.color.MaterialColors.getColor(
+                    statusText,
+                    com.google.android.material.R.attr.colorError,
+                )
+            } else {
+                com.google.android.material.color.MaterialColors.getColor(
+                    statusText,
+                    com.google.android.material.R.attr.colorOnSurfaceVariant,
+                )
+            },
+        )
+    }
+
+    private fun flashHaptic(success: Boolean) {
+        try {
+            val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val manager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+                manager.defaultVibrator
+            } else {
+                @Suppress("DEPRECATION")
+                getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (success) {
+                    vibrator.vibrate(VibrationEffect.createOneShot(120, VibrationEffect.DEFAULT_AMPLITUDE))
+                } else {
+                    val timings = longArrayOf(0, 80, 100, 80)
+                    vibrator.vibrate(VibrationEffect.createWaveform(timings, -1))
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                if (success) {
+                    vibrator.vibrate(120)
+                } else {
+                    vibrator.vibrate(longArrayOf(0, 80, 100, 80), -1)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("NfcFlasher", "Failed to play haptic feedback", e)
         }
     }
 

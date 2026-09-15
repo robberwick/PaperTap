@@ -15,6 +15,17 @@
         android:layout_height="wrap_content"
         android:padding="16dp">
 
+        <ImageButton
+            android:id="@+id/editTicketButton"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/edit_ticket"
+            android:src="@drawable/ic_edit"
+            android:scaleType="centerInside"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
         <TextView
             android:id="@+id/ticketDateTime"
             android:layout_width="0dp"
@@ -23,7 +34,7 @@
             android:textColor="?android:attr/textColorPrimary"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            app:layout_constraintEnd_toStartOf="@id/editTicketButton" />
 
         <TextView
             android:id="@+id/ticketJourney"
@@ -35,7 +46,7 @@
             android:layout_marginTop="4dp"
             app:layout_constraintTop_toBottomOf="@id/ticketDateTime"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            app:layout_constraintEnd_toStartOf="@id/editTicketButton" />
 
         <TextView
             android:id="@+id/usageInfo"

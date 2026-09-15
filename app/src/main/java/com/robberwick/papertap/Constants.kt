@@ -17,6 +17,7 @@ object PrefKeys {
     const val QrPadding = "Qr_Padding"
     const val ShowStationCodesOnBarcode = "Show_Station_Codes_On_Barcode"
     const val ShowTravelDateOnBarcode = "Show_Travel_Date_On_Barcode"
+    const val OnboardingShown = "Onboarding_Shown"
 }
 
 object IntentKeys {

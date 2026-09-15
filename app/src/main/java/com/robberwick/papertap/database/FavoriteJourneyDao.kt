@@ -23,6 +23,14 @@ interface FavoriteJourneyDao {
 
     @Query("DELETE FROM favorite_journeys WHERE id = :id")
     suspend fun deleteById(id: Long)
+    @Query("SELECT * FROM favorite_journeys WHERE id = :id")
+    suspend fun getById(id: Long): FavoriteJourneyEntity?
+
+    @Query(
+        "UPDATE favorite_journeys SET label = :label, isDefaultLabel = :isDefault WHERE id = :id",
+    )
+    suspend fun updateLabelWithFlag(id: Long, label: String, isDefault: Boolean)
+
 
 
     /**

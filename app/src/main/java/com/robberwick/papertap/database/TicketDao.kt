@@ -6,7 +6,19 @@ import androidx.room.*
 @Dao
 interface TicketDao {
     @Transaction
-    @Query("SELECT * FROM tickets ORDER BY addedAt DESC")
+    @Query(
+        """
+        SELECT * FROM tickets
+        ORDER BY
+            CASE WHEN travelDate IS NOT NULL
+                 AND travelDate >= CAST(strftime('%s', 'now') AS INTEGER) * 1000
+                 THEN 0 ELSE 1 END ASC,
+            CASE WHEN travelDate IS NOT NULL
+                 AND travelDate >= CAST(strftime('%s', 'now') AS INTEGER) * 1000
+                 THEN travelDate END ASC,
+            addedAt DESC
+        """,
+    )
     fun getTicketsWithDisplays(): LiveData<List<TicketWithDisplays>>
 
     @Query("UPDATE tickets SET lastFlashedAt = :timestamp, flashCount = flashCount + 1 WHERE id = :ticketId")

@@ -17,5 +17,9 @@ data class FavoriteJourneyEntity(
     val label: String,                  // User label e.g. "commute"
     val createdAt: Long = System.currentTimeMillis(),
     val usageCount: Int = 0,            // Track usage for future sorting
-    val lastUsedAt: Long? = null        // Track last usage
+    val lastUsedAt: Long? = null,       // Track last usage
+
+    /** True when the label equals the generated route default. Persisted so
+     *  the UI no longer guesses by string comparison (C8). */
+    val isDefaultLabel: Boolean = false,
 )

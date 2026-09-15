@@ -30,6 +30,12 @@
     <!-- NFC Flasher Status -->
     <string name="status_tap_to_write">Tap NFC display to phone to write ticket</string>
     <string name="status_writing_ticket">Writing ticket…</string>
+    <string name="status_success">Success! Flashed display!</string>
+    <string name="status_display_model">Display: %1$s</string>
+    <string name="onboarding_hint">Hold your e-paper display flat against the back of your phone and move it slowly until you hear a chime.</string>
+    <string name="edit_ticket">Edit ticket</string>
+    <string name="ticket_list_empty_hint">Add a ticket with the + button. Once added, long-press or tap the pencil icon to edit it.</string>
+
     <string name="display_model_title">Display model</string>
     <string name="experimental_display_models_title">Show experimental display models</string>
     <string name="experimental_display_models_summary">Models other than 1.54\" B have not been verified on WaveShare hardware</string>
@@ -42,4 +48,9 @@
     <string name="no_barcode_found">No QR or Aztec code was found. Try another image or PDF.</string>
     <string name="unsupported_document">PaperTap can extract tickets from PDF and image files.</string>
     <string name="retry_extraction">Retry</string>
+    <!-- Post-save flash prompt -->
+    <string name="write_to_display_now">Write to display now?</string>
+    <string name="write_to_display_now_message">Your ticket was saved. Would you like to write it to a display now?</string>
+    <string name="write_now">Write now</string>
+    <string name="later">Later</string>
 </resources>
