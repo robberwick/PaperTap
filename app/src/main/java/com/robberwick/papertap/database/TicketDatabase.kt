@@ -13,7 +13,7 @@ import com.robberwick.papertap.BuildConfig
         DisplayEntity::class,
         TicketDisplayMapping::class,
     ],
-    version = 9,
+    version = 10,
     exportSchema = true,
 )
 abstract class TicketDatabase : RoomDatabase() {
@@ -32,7 +32,7 @@ abstract class TicketDatabase : RoomDatabase() {
                     context.applicationContext,
                     TicketDatabase::class.java,
                     "ticket_database",
-                ).addMigrations(MIGRATION_8_9)
+                ).addMigrations(MIGRATION_8_9, MIGRATION_9_10)
 
                 // Release builds must fail loudly if a migration is missing;
                 // only disposable debug databases may fall back to a rebuild.

@@ -53,9 +53,9 @@ class FavoriteJourneyAdapter(
             forwardButton.text = "$originName → $destName"
             returnButton.text = "$destName → $originName"
 
-            // Show label only if it's different from the default route
-            val defaultLabel = "$originName → $destName"
-            if (favorite.label != defaultLabel && favorite.label.isNotBlank()) {
+            // C8: use the persisted default-label flag instead of comparing
+            // against a recomputed default string.
+            if (!favorite.isDefaultLabel && favorite.label.isNotBlank()) {
                 favoriteLabelText.text = favorite.label
                 favoriteLabelText.visibility = View.VISIBLE
             } else {

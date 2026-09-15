@@ -64,7 +64,7 @@
             android:id="@+id/emptyStateText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="No tickets yet\nTap + to add your first ticket"
+            android:text="@string/ticket_list_empty_hint"
             android:textSize="16sp"
             android:textColor="?android:attr/textColorSecondary"
             android:textAlignment="center"

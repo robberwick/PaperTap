@@ -33,6 +33,8 @@
     <string name="status_success">Success! Flashed display!</string>
     <string name="status_display_model">Display: %1$s</string>
     <string name="onboarding_hint">Hold your e-paper display flat against the back of your phone and move it slowly until you hear a chime.</string>
+    <string name="edit_ticket">Edit ticket</string>
+    <string name="ticket_list_empty_hint">Add a ticket with the + button. Once added, long-press or tap the pencil icon to edit it.</string>
 
     <string name="display_model_title">Display model</string>
     <string name="experimental_display_models_title">Show experimental display models</string>
