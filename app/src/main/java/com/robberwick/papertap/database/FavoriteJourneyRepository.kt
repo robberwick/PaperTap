@@ -7,6 +7,8 @@ import androidx.room.withTransaction
 private const val MAX_FAVORITES = 50
 
 class FavoriteJourneyRepository(context: Context) {
+    private val database = TicketDatabase.getDatabase(context)
+    private val favoriteJourneyDao = database.favoriteJourneyDao()
 
     val allFavorites: LiveData<List<FavoriteJourneyEntity>> = favoriteJourneyDao.getAllFavorites()
 
