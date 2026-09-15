@@ -19,6 +19,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.robberwick.papertap.database.FavoriteJourneyEntity
+import com.robberwick.papertap.database.FavoriteJourneyRepository
 import com.robberwick.papertap.database.TicketEntity
 import com.robberwick.papertap.database.TicketRepository
 import kotlinx.coroutines.Dispatchers
@@ -96,7 +97,7 @@ class EditTicketActivity : AppCompatActivity() {
         saveButton.setOnClickListener { saveTicket() }
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun onHandleBackPressed() {
+            override fun handleOnBackPressed() {
                 confirmDiscardOrFinish()
             }
         })

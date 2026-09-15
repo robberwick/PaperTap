@@ -1,11 +1,11 @@
 package com.robberwick.papertap
 
+import android.app.PendingIntent
 import android.content.Context
-import android.os.Build
-import android.os.Bundle
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.os.VibratorManager
+import android.content.Intent
+import android.content.IntentFilter
+import android.graphics.Bitmap
+import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
@@ -17,6 +17,9 @@ import android.nfc.tech.NfcA
 import android.os.Build
 import android.os.Bundle
 import android.os.PatternMatcher
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.util.Log
 import android.widget.ImageView
 import android.widget.TextView
