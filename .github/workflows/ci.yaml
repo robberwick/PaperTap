@@ -41,9 +41,6 @@ jobs:
           echo "keyAlias=androiddebugkey" >> ~/.android/keystore.properties
           echo "keyPassword=android" >> ~/.android/keystore.properties
 
-      - name: set up Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: lint
         run: |
           ./gradlew lint --no-daemon -Dorg.gradle.java.home="$JAVA_HOME"
@@ -57,7 +54,7 @@ jobs:
           ./gradlew assembleDebug --no-daemon -Dorg.gradle.java.home="$JAVA_HOME"
 
       - name: upload Room schemas
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: room-schemas
           path: app/schemas
