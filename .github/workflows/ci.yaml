@@ -41,6 +41,9 @@ jobs:
           echo "keyAlias=androiddebugkey" >> ~/.android/keystore.properties
           echo "keyPassword=android" >> ~/.android/keystore.properties
 
+      - name: purge stale configuration cache
+        run: rm -rf ~/.gradle/configuration-cache
+
       - name: lint
         run: |
           ./gradlew lint --no-daemon -Dorg.gradle.java.home="$JAVA_HOME"
