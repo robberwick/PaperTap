@@ -16,11 +16,13 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.robberwick.papertap.database.FavoriteJourneyEntity
 import com.robberwick.papertap.database.TicketRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -66,6 +68,9 @@ class AddTicketActivity : AppCompatActivity() {
     private var selectedTravelDate: Long? = null
     private var currentDocumentUri: Uri? = null
 
+    private var isDirty = false
+    private var currentFavorites: List<FavoriteJourneyEntity> = emptyList()
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         if (BuildConfig.DEBUG) android.util.Log.d("AddTicketActivity", "onCreate - Activity starting")
@@ -81,6 +86,11 @@ class AddTicketActivity : AppCompatActivity() {
         favoriteJourneyRepository = com.robberwick.papertap.database.FavoriteJourneyRepository(this)
         preferences = Preferences(this)
         qrExtractor = PdfQrExtractor(this)
+
+        // A17: observe favorites once for the Activity lifetime; dialogs read the cached list
+        favoriteJourneyRepository.allFavorites.observe(this) { favorites ->
+            currentFavorites = favorites
+        }
 
 
         // Initialize StationLookup
@@ -109,11 +119,17 @@ class AddTicketActivity : AppCompatActivity() {
         findViewById<View>(R.id.journeyRow).setOnClickListener { showJourneyDialog() }
 
         // Setup buttons
-        cancelButton.setOnClickListener { finish() }
+        cancelButton.setOnClickListener { confirmDiscardOrFinish() }
         addButton.setOnClickListener { addTicket() }
         retryExtractionButton.setOnClickListener {
             currentDocumentUri?.let(::processDocument)
         }
+
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun onHandleBackPressed() {
+                confirmDiscardOrFinish()
+            }
+        })
 
 
         // Get document URI from intent
@@ -143,6 +159,8 @@ class AddTicketActivity : AppCompatActivity() {
                     extractedRawData = result.barcodeData.rawData
                     extractedBarcodeFormat = result.barcodeData.barcodeFormat
                     if (!checkForDuplicateAndAlert(result.barcodeData.rawData)) {
+                        // A18: the coroutine may resume after the activity is gone
+                        if (isFinishing || isDestroyed) return@launch
                         displayPreview(result.bitmap)
                     }
                 }
@@ -285,6 +303,9 @@ class AddTicketActivity : AppCompatActivity() {
         }
 
         if (existingTicket != null) {
+            // A18: the coroutine may resume after the activity is gone
+            if (isFinishing || isDestroyed) return true
+
             // Build ticket details for display
             val details = buildString {
                 append("Name: ${existingTicket.userLabel}\n")
@@ -311,13 +332,32 @@ class AddTicketActivity : AppCompatActivity() {
                 .setPositiveButton("OK") { _, _ ->
                     finish()
                 }
-                .setCancelable(false)
+                .setCancelable(true)
                 .show()
 
             return true
         }
 
         return false
+    }
+
+    /** C10: confirm before discarding unsaved edits. */
+    private fun confirmDiscardOrFinish() {
+        if (!isDirty) {
+            finish()
+            return
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Discard changes?")
+            .setMessage("Your unsaved changes will be lost.")
+            .setPositiveButton("Discard") { _, _ -> finish() }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    override fun onSupportNavigateUp(): Boolean {
+        confirmDiscardOrFinish()
+        return true
     }
 
     private fun showNameDialog() {
@@ -331,7 +371,11 @@ class AddTicketActivity : AppCompatActivity() {
             .setView(input)
             .setPositiveButton("Set") { _, _ ->
                 val newLabel = input.text.toString().trim()
-                ticketLabel = if (newLabel.isEmpty()) generateDefaultLabel() else newLabel
+                val appliedLabel = if (newLabel.isEmpty()) generateDefaultLabel() else newLabel
+                if (appliedLabel != ticketLabel) {
+                    ticketLabel = appliedLabel
+                    isDirty = true
+                }
                 nameValue.text = ticketLabel
             }
             .setNegativeButton("Cancel", null)
@@ -348,7 +392,16 @@ class AddTicketActivity : AppCompatActivity() {
             this,
             { _, year, month, dayOfMonth ->
                 calendar.set(year, month, dayOfMonth)
-                selectedTravelDate = calendar.timeInMillis
+                // Normalize to midnight local time so same-day tickets compare equal
+                calendar.set(Calendar.HOUR_OF_DAY, 0)
+                calendar.set(Calendar.MINUTE, 0)
+                calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+                val newDate = calendar.timeInMillis
+                if (newDate != selectedTravelDate) {
+                    selectedTravelDate = newDate
+                    isDirty = true
+                }
 
                 val dateFormat = SimpleDateFormat("d MMM yyyy", Locale.getDefault())
                 dateValue.text = dateFormat.format(calendar.time)
@@ -388,11 +441,13 @@ class AddTicketActivity : AppCompatActivity() {
 
         originInput.setOnItemClickListener { _, _, position, _ ->
             tempOrigin = stationAdapter.getItem(position)
+            originInput.error = null
             updateSaveFavoriteButtonVisibility(tempOrigin, tempDest, saveFavoriteButton)
         }
 
         destInput.setOnItemClickListener { _, _, position, _ ->
             tempDest = (destInput.adapter as StationAdapter).getItem(position)
+            destInput.error = null
             updateSaveFavoriteButtonVisibility(tempOrigin, tempDest, saveFavoriteButton)
         }
 
@@ -400,13 +455,38 @@ class AddTicketActivity : AppCompatActivity() {
         val dialog = AlertDialog.Builder(this)
             .setTitle("Journey")
             .setView(dialogView)
-            .setPositiveButton("OK") { _, _ ->
+            .setPositiveButton("OK", null)
+            .setNegativeButton("Cancel", null)
+            .create()
+
+        // C9: OK must not silently discard typed-but-unselected stations, so the
+        // default auto-dismiss is replaced with a validating click listener.
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                var valid = true
+                if (originInput.text.isBlank()) {
+                    tempOrigin = null
+                } else if (tempOrigin?.toString() != originInput.text.toString()) {
+                    originInput.error = "Pick a station from the suggestions"
+                    valid = false
+                }
+                if (destInput.text.isBlank()) {
+                    tempDest = null
+                } else if (tempDest?.toString() != destInput.text.toString()) {
+                    destInput.error = "Pick a station from the suggestions"
+                    valid = false
+                }
+                if (!valid) return@setOnClickListener
+
+                if (tempOrigin != selectedOriginStation || tempDest != selectedDestinationStation) {
+                    isDirty = true
+                }
                 selectedOriginStation = tempOrigin
                 selectedDestinationStation = tempDest
                 updateJourneyDisplay()
+                dialog.dismiss()
             }
-            .setNegativeButton("Cancel", null)
-            .create()
+        }
 
         dialog.show()
 
@@ -422,6 +502,7 @@ class AddTicketActivity : AppCompatActivity() {
                 selectedOriginStation = tempOrigin
                 selectedDestinationStation = tempDest
                 updateJourneyDisplay()
+                isDirty = true
 
                 // Record usage
                 lifecycleScope.launch {
@@ -440,6 +521,7 @@ class AddTicketActivity : AppCompatActivity() {
                 selectedOriginStation = tempOrigin
                 selectedDestinationStation = tempDest
                 updateJourneyDisplay()
+                isDirty = true
 
                 // Record usage
                 lifecycleScope.launch {
@@ -455,19 +537,14 @@ class AddTicketActivity : AppCompatActivity() {
             layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this@AddTicketActivity)
         }
 
-        // Observe favorites
-        var favoritesCount = 0
-        favoriteJourneyRepository.allFavorites.observe(this) { favorites ->
-            favoriteAdapter.submitList(favorites)
-            favoritesCount = favorites.size
-
-            if (favorites.isEmpty()) {
-                favoritesRecyclerView.visibility = View.GONE
-                emptyFavoritesState.visibility = View.VISIBLE
-            } else {
-                favoritesRecyclerView.visibility = View.VISIBLE
-                emptyFavoritesState.visibility = View.GONE
-            }
+        // A17: favorites are observed once in onCreate; submit the cached list here
+        favoriteAdapter.submitList(currentFavorites)
+        if (currentFavorites.isEmpty()) {
+            favoritesRecyclerView.visibility = View.GONE
+            emptyFavoritesState.visibility = View.VISIBLE
+        } else {
+            favoritesRecyclerView.visibility = View.VISIBLE
+            emptyFavoritesState.visibility = View.GONE
         }
 
         // Save favorite button click
@@ -479,8 +556,6 @@ class AddTicketActivity : AppCompatActivity() {
             }
         }
 
-        // Get reference to positive button for dynamic visibility
-        val positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
 
         // Tab switching logic
         tabLayout.addOnTabSelectedListener(object : com.google.android.material.tabs.TabLayout.OnTabSelectedListener {
@@ -489,12 +564,10 @@ class AddTicketActivity : AppCompatActivity() {
                     0 -> { // Favorites tab
                         favoritesContent.visibility = View.VISIBLE
                         searchContent.visibility = View.GONE
-                        positiveButton.visibility = View.GONE
                     }
                     1 -> { // Search tab
                         favoritesContent.visibility = View.GONE
                         searchContent.visibility = View.VISIBLE
-                        positiveButton.visibility = View.VISIBLE
                     }
                 }
             }
@@ -509,12 +582,10 @@ class AddTicketActivity : AppCompatActivity() {
                 tabLayout.selectTab(tabLayout.getTabAt(0)) // Favorites
                 favoritesContent.visibility = View.VISIBLE
                 searchContent.visibility = View.GONE
-                positiveButton.visibility = View.GONE
             } else {
                 tabLayout.selectTab(tabLayout.getTabAt(1)) // Search
                 favoritesContent.visibility = View.GONE
                 searchContent.visibility = View.VISIBLE
-                positiveButton.visibility = View.VISIBLE
             }
         }
     }
