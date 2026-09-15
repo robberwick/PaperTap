@@ -52,9 +52,16 @@ class TicketRepository(context: Context) {
         return ticketDao.findDuplicate(rawData)
     }
 
+    /** Distinguishes a fresh insert from a barcode that already exists in the collection. */
+    sealed interface InsertTicketResult {
+        data class Inserted(val ticketId: Long) : InsertTicketResult
+        data class Duplicate(val existingTicketId: Long) : InsertTicketResult
+    }
+
     /**
-     * Insert a ticket with raw barcode data and user label
-     * Returns the ID of the inserted ticket, or the ID of an existing duplicate if found
+     * Insert a ticket with raw barcode data and user label.
+     * Returns [InsertTicketResult.Inserted] for a new ticket, or
+     * [InsertTicketResult.Duplicate] when the barcode already exists.
      */
     suspend fun insertTicket(
         rawData: String,
@@ -63,11 +70,11 @@ class TicketRepository(context: Context) {
         originStationCode: String? = null,
         destinationStationCode: String? = null,
         travelDate: Long? = null
-    ): Long {
+    ): InsertTicketResult {
         // Check for duplicate by raw barcode data
         val existing = ticketDao.findDuplicate(rawData)
         if (existing != null) {
-            return existing.id
+            return InsertTicketResult.Duplicate(existing.id)
         }
 
         // No duplicate found, insert new ticket
@@ -79,7 +86,7 @@ class TicketRepository(context: Context) {
             destinationStationCode = destinationStationCode,
             travelDate = travelDate
         )
-        return ticketDao.insert(ticket)
+        return InsertTicketResult.Inserted(ticketDao.insert(ticket))
     }
 
     /**

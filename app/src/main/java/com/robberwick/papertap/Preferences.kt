@@ -47,6 +47,14 @@ class Preferences(context: Context) {
     fun experimentalDisplayModelsEnabled(): Boolean {
         return preferences.getBoolean(PrefKeys.ExperimentalDisplayModels, false)
     }
+    fun isOnboardingShown(): Boolean {
+        return preferences.getBoolean(PrefKeys.OnboardingShown, false)
+    }
+
+    fun setOnboardingShown() {
+        preferences.edit().putBoolean(PrefKeys.OnboardingShown, true).apply()
+    }
+
 
     fun getQrPadding(): Int {
         return preferences.getInt(PrefKeys.QrPadding, 5)

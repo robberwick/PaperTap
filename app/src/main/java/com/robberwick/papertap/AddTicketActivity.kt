@@ -559,7 +559,7 @@ class AddTicketActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
-                val ticketId = withContext(Dispatchers.IO) {
+                val result = withContext(Dispatchers.IO) {
                     ticketRepository.insertTicket(
                         rawData = rawData,
                         format = barcodeFormat,
@@ -570,30 +570,46 @@ class AddTicketActivity : AppCompatActivity() {
                     )
                 }
 
-                val ticket = withContext(Dispatchers.IO) {
-                    ticketRepository.getById(ticketId)
+                when (result) {
+                    is TicketRepository.InsertTicketResult.Duplicate -> {
+                        Toast.makeText(
+                            this@AddTicketActivity,
+                            "This ticket is already in your collection",
+                            Toast.LENGTH_LONG,
+                        ).show()
+                        finish()
+                    }
+                    is TicketRepository.InsertTicketResult.Inserted -> {
+                        Toast.makeText(this@AddTicketActivity, "Ticket added!", Toast.LENGTH_SHORT).show()
+                        promptWriteToDisplay(result.ticketId)
+                    }
                 }
-
-                if (ticket != null && ticket.userLabel != label) {
-                    Toast.makeText(
-                        this@AddTicketActivity,
-                        "This ticket is already in your collection",
-                        Toast.LENGTH_LONG
-                    ).show()
-                } else {
-                    Toast.makeText(this@AddTicketActivity, "Ticket added!", Toast.LENGTH_SHORT).show()
-                }
-
-                finish()
             } catch (e: Exception) {
                 if (BuildConfig.DEBUG) e.printStackTrace()
                 Toast.makeText(
                     this@AddTicketActivity,
                     "Error saving ticket: ${e.message}",
-                    Toast.LENGTH_LONG
+                    Toast.LENGTH_LONG,
                 ).show()
             }
         }
+    }
+
+    /** C4: offer a direct path from "Ticket added!" into the flash flow. */
+    private fun promptWriteToDisplay(ticketId: Long) {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.write_to_display_now)
+            .setMessage(R.string.write_to_display_now_message)
+            .setPositiveButton(R.string.write_now) { _, _ ->
+                startActivity(
+                    android.content.Intent(this, NfcFlasher::class.java)
+                        .putExtra("TICKET_ID", ticketId),
+                )
+                finish()
+            }
+            .setNegativeButton(R.string.later) { _, _ -> finish() }
+            .setOnCancelListener { finish() }
+            .show()
     }
 
     private fun updateSaveFavoriteButtonVisibility(
